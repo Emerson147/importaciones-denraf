@@ -1,0 +1,289 @@
+<div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-6 md:p-8 transition-colors duration-300">
+  <div class="max-w-[1600px] mx-auto space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <div class="text-4xl">📦</div>
+        <div>
+          <h1 class="text-3xl font-serif font-bold text-stone-800 dark:text-stone-100">Inventario Inteligente</h1>
+          <p class="text-stone-500 dark:text-stone-400 text-sm font-light">Análisis predictivo y control de stock</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Métricas Inteligentes -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Valor Total -->
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-10 w-10 rounded-xl bg-stone-800 dark:bg-stone-700 flex items-center justify-center text-white">
+            <span class="material-icons-outlined">inventory_2</span>
+          </div>
+          <p class="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400 font-medium">Valor Total</p>
+        </div>
+        <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">S/ {{ metrics().totalValue | number:'1.0-0' }}</p>
+        <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">{{ metrics().totalProducts }} productos</p>
+      </div>
+
+      <!-- Productos Críticos -->
+      <div class="rounded-2xl border border-red-200/30 dark:border-red-900/20 shadow-sm p-6 bg-red-50/20 dark:bg-red-950/10 transition-colors duration-300">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-10 w-10 rounded-xl bg-red-600/70 dark:bg-red-600/60 flex items-center justify-center text-white">
+            <span class="material-icons-outlined">error_outline</span>
+          </div>
+          <p class="text-xs uppercase tracking-wide text-stone-600 dark:text-stone-400 font-medium">Críticos</p>
+        </div>
+        <p class="text-3xl font-bold text-red-600/70 dark:text-red-500/70">{{ metrics().criticalProducts }}</p>
+        <p class="text-xs text-stone-600 dark:text-stone-400 mt-2">Requieren atención urgente</p>
+      </div>
+
+      <!-- Rotación Promedio -->
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-10 w-10 rounded-xl bg-stone-700 dark:bg-stone-600 flex items-center justify-center text-white">
+            <span class="material-icons-outlined">autorenew</span>
+          </div>
+          <p class="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400 font-medium">Rotación Prom.</p>
+        </div>
+        <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">{{ metrics().averageRotation | number:'1.2-2' }}</p>
+        <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">unidades por día</p>
+      </div>
+
+      <!-- Alertas Activas -->
+      <div class="rounded-2xl border border-amber-200/30 dark:border-amber-900/20 shadow-sm p-6 bg-amber-50/20 dark:bg-amber-950/10 transition-colors duration-300">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-10 w-10 rounded-xl bg-amber-600/70 dark:bg-amber-600/60 flex items-center justify-center text-white">
+            <span class="material-icons-outlined">notifications_active</span>
+          </div>
+          <p class="text-xs uppercase tracking-wide text-stone-600 dark:text-stone-400 font-medium">Alertas</p>
+        </div>
+        <p class="text-3xl font-bold text-amber-600/70 dark:text-amber-500/70">{{ stockAlerts().length }}</p>
+        <p class="text-xs text-stone-600 dark:text-stone-400 mt-2">{{ highPriorityAlertsCount() }} alta prioridad</p>
+      </div>
+    </div>
+
+    <!-- Alertas Críticas -->
+    @if (stockAlerts().length > 0) {
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Alertas de Stock</h2>
+          <span class="text-xs text-stone-400 dark:text-stone-500">{{ stockAlerts().length }} alertas activas</span>
+        </div>
+        
+        <div class="space-y-3">
+          @for (alert of stockAlerts().slice(0, 5); track alert.id) {
+            <div class="flex items-center gap-4 p-4 rounded-xl border transition-all hover:shadow-md"
+                 [ngClass]="{
+                   'bg-red-50/20 dark:bg-red-950/10 border-red-200/30 dark:border-red-900/20': alert.alertType === 'critical' || alert.alertType === 'stockout',
+                   'bg-amber-50/20 dark:bg-amber-950/10 border-amber-200/30 dark:border-amber-900/20': alert.alertType === 'low',
+                   'bg-stone-50 dark:bg-stone-900 border-stone-200 dark:border-stone-800': alert.alertType === 'overstock'
+                 }">
+              <div class="h-10 w-10 rounded-xl flex items-center justify-center"
+                   [ngClass]="{
+                     'bg-red-600/70 text-white': alert.alertType === 'critical' || alert.alertType === 'stockout',
+                     'bg-amber-600/70 text-white': alert.alertType === 'low',
+                     'bg-stone-600 text-white': alert.alertType === 'overstock'
+                   }">
+                <span class="material-icons-outlined text-sm">
+                  @if (alert.alertType === 'stockout') { inventory }
+                  @else if (alert.alertType === 'critical') { error_outline }
+                  @else if (alert.alertType === 'low') { warning }
+                  @else { info }
+                </span>
+              </div>
+              
+              <div class="flex-1">
+                <p class="font-semibold text-stone-800 dark:text-stone-100">{{ alert.product.name }}</p>
+                <p class="text-sm text-stone-600 dark:text-stone-400">{{ alert.message }}</p>
+              </div>
+              
+              <div class="text-right">
+                <p class="text-xs text-stone-400 dark:text-stone-500">Stock actual</p>
+                <p class="text-xl font-bold"
+                   [ngClass]="{
+                     'text-red-600/70 dark:text-red-500/70': alert.product.stock === 0,
+                     'text-amber-600/70 dark:text-amber-500/70': alert.product.stock > 0 && alert.product.stock <= 3,
+                     'text-stone-900 dark:text-stone-100': alert.product.stock > 3
+                   }">
+                  {{ alert.product.stock }}
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Gráficos de Análisis -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Rotación de Productos -->
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Rotación de Productos</h2>
+          <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Top 10 productos más vendidos</p>
+        </div>
+        
+        <apx-chart
+          [series]="rotationChartOptions().series!"
+          [chart]="rotationChartOptions().chart!"
+          [plotOptions]="rotationChartOptions().plotOptions!"
+          [xaxis]="rotationChartOptions().xaxis!"
+          [yaxis]="rotationChartOptions().yaxis!"
+          [colors]="rotationChartOptions().colors!"
+          [grid]="rotationChartOptions().grid!"
+          [tooltip]="rotationChartOptions().tooltip!"
+          [dataLabels]="rotationChartOptions().dataLabels!"
+        ></apx-chart>
+      </div>
+
+      <!-- Estado del Inventario -->
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Estado del Inventario</h2>
+          <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Distribución por estado</p>
+        </div>
+        
+        <apx-chart
+          [series]="inventoryStatusChartOptions().series!"
+          [chart]="inventoryStatusChartOptions().chart!"
+          [labels]="inventoryStatusChartOptions().labels!"
+          [colors]="inventoryStatusChartOptions().colors!"
+          [plotOptions]="inventoryStatusChartOptions().plotOptions!"
+          [legend]="inventoryStatusChartOptions().legend!"
+          [dataLabels]="inventoryStatusChartOptions().dataLabels!"
+        ></apx-chart>
+      </div>
+    </div>
+
+    <!-- Sugerencias de Reorden -->
+    @if (reorderSuggestions().length > 0) {
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Sugerencias de Reabastecimiento</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Productos que requieren reorden prioritario</p>
+          </div>
+          <span class="px-3 py-1 rounded-lg bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 text-xs font-bold">
+            {{ reorderSuggestions().length }} productos
+          </span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          @for (suggestion of reorderSuggestions().slice(0, 6); track suggestion.product.id) {
+            <div class="p-5 rounded-xl border border-stone-200 dark:border-stone-700 hover:shadow-lg transition-all bg-stone-50 dark:bg-stone-800/50">
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex-1">
+                  <p class="font-bold text-stone-900 dark:text-stone-100">{{ suggestion.product.name }}</p>
+                  <p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{{ suggestion.product.category }}</p>
+                </div>
+                @if (suggestion.product.stock === 0) {
+                  <span class="px-2 py-1 rounded-lg bg-red-600/70 text-white text-xs font-bold shadow-sm">Agotado</span>
+                }
+                @else if (suggestion.status === 'critical') {
+                  <span class="px-2 py-1 rounded-lg bg-amber-600/70 text-white text-xs font-bold shadow-sm">Crítico</span>
+                }
+              </div>
+              
+              <div class="space-y-2 mb-4">
+                <div class="flex justify-between text-sm">
+                  <span class="text-stone-600 dark:text-stone-400">Stock actual:</span>
+                  <span class="font-bold text-stone-900 dark:text-stone-100">{{ suggestion.product.stock }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-stone-600 dark:text-stone-400">Días restantes:</span>
+                  <span class="font-bold text-stone-800 dark:text-stone-200">
+                    @if (!isFinite(suggestion.daysUntilStockout)) { ∞ }
+                    @else { {{ suggestion.daysUntilStockout | number:'1.0-0' }} días }
+                  </span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-stone-600 dark:text-stone-400">Rotación:</span>
+                  <span class="font-bold text-stone-900 dark:text-stone-100">{{ suggestion.rotationRate | number:'1.2-2' }}/día</span>
+                </div>
+              </div>
+              
+              <div class="pt-3 border-t border-stone-200 dark:border-stone-700">
+                <p class="text-xs text-stone-500 dark:text-stone-400 mb-2">Cantidad sugerida:</p>
+                <div class="flex items-center justify-between">
+                  <span class="text-2xl font-bold text-stone-900 dark:text-stone-100">{{ suggestion.reorderQuantity }}</span>
+                  <span class="text-xs text-stone-600 dark:text-stone-400">unidades</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Productos Críticos y Alta Demanda -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Productos Críticos -->
+      @if (criticalProducts().length > 0) {
+        <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+          <div class="mb-4">
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Productos Críticos</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Stock bajo o agotado</p>
+          </div>
+          
+          <div class="space-y-3">
+            @for (analysis of criticalProducts().slice(0, 5); track analysis.product.id) {
+              <div class="flex items-center gap-4 p-4 rounded-xl bg-red-50/20 dark:bg-red-950/10 border border-red-200/30 dark:border-red-900/20">
+                <div class="h-12 w-12 rounded-xl bg-red-600/70 dark:bg-red-600/60 flex items-center justify-center text-white font-bold text-lg">
+                  {{ analysis.product.stock }}
+                </div>
+                <div class="flex-1">
+                  <p class="font-semibold text-stone-900 dark:text-stone-100">{{ analysis.product.name }}</p>
+                  <p class="text-xs text-stone-500 dark:text-stone-400">
+                    @if (analysis.product.stock === 0) { Agotado }
+                    @else { {{ analysis.daysUntilStockout }} días hasta agotamiento }
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm font-bold text-stone-900 dark:text-stone-100">+{{ analysis.reorderQuantity }}</p>
+                  <p class="text-xs text-stone-500 dark:text-stone-400">reorden</p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Alta Demanda -->
+      @if (highDemandProducts().length > 0) {
+        <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+          <div class="mb-4">
+            <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Alta Demanda</h2>
+            <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Productos más vendidos</p>
+          </div>
+          
+          <div class="space-y-3">
+            @for (analysis of highDemandProducts().slice(0, 5); track analysis.product.id; let i = $index) {
+              <div class="flex items-center gap-4 p-4 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+                <div class="h-12 w-12 rounded-xl flex items-center justify-center font-bold text-lg text-white"
+                     [ngClass]="{
+                       'bg-stone-900': i === 0,
+                       'bg-stone-700': i === 1,
+                       'bg-stone-600': i === 2,
+                       'bg-stone-500': i > 2
+                     }">
+                  #{{ i + 1 }}
+                </div>
+                <div class="flex-1">
+                  <p class="font-semibold text-stone-900 dark:text-stone-100">{{ analysis.product.name }}</p>
+                  <p class="text-xs text-stone-500 dark:text-stone-400">{{ analysis.totalSold }} vendidos • S/ {{ analysis.revenue | number:'1.0-0' }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm font-bold text-stone-900 dark:text-stone-100">{{ analysis.rotationRate | number:'1.2-2' }}</p>
+                  <p class="text-xs text-stone-500 dark:text-stone-400">und/día</p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+
+  </div>
+</div>

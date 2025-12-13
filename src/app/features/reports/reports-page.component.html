@@ -1,0 +1,323 @@
+<div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-6 md:p-8 transition-colors duration-300">
+  <div class="max-w-[1600px] mx-auto space-y-6">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-6">
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-3">
+          <div class="text-4xl">📈</div>
+          <div>
+            <h1 class="text-3xl font-serif font-bold text-stone-800 dark:text-stone-100">Reportes</h1>
+            <p class="text-stone-500 dark:text-stone-400 text-sm font-light">Análisis de rendimiento financiero</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex gap-3">
+        <!-- Botón Exportar -->
+        <app-ui-export-menu
+          [data]="exportData()"
+          type="reports"
+        />
+        
+        <app-ui-button 
+          variant="outline" 
+          class="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 rounded-xl"
+        >
+          <span class="material-icons-outlined text-sm mr-2">calendar_today</span>
+          Noviembre 2025
+        </app-ui-button>
+        <app-ui-button 
+          (onClick)="downloadReport()" 
+          class="bg-stone-900 dark:bg-stone-100 hover:bg-black dark:hover:bg-stone-200 text-white dark:text-stone-900 shadow-lg rounded-xl"
+        >
+          <span class="material-icons-outlined text-sm mr-2">download</span>
+          Exportar PDF
+        </app-ui-button>
+      </div>
+    </div>
+
+    <!-- KPIs Principales -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-10 w-10 rounded-xl bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center text-white">
+            <span class="material-icons-outlined text-lg">paid</span>
+          </div>
+          <p class="text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500 font-medium">Ingresos Totales</p>
+        </div>
+        <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">S/ {{ totalRevenue() | number:'1.0-0' }}</p>
+        <div class="flex items-center gap-2 mt-2">
+          <span class="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded-full text-xs font-bold border border-emerald-100 dark:border-emerald-800">
+            +18.2%
+          </span>
+          <span class="text-xs text-stone-500 dark:text-stone-400">vs semana pasada</span>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-10 w-10 rounded-xl bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white">
+            <span class="material-icons-outlined text-lg">shopping_cart</span>
+          </div>
+          <p class="text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500 font-medium">Venta Promedio</p>
+        </div>
+        <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">S/ {{ averageSale() | number:'1.0-0' }}</p>
+        <p class="text-xs text-stone-500 dark:text-stone-400 mt-2">Por día esta semana</p>
+      </div>
+
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-10 w-10 rounded-xl bg-purple-500 dark:bg-purple-600 flex items-center justify-center text-white">
+            <span class="material-icons-outlined text-lg">inventory_2</span>
+          </div>
+          <p class="text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500 font-medium">Productos Vendidos</p>
+        </div>
+        <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">228</p>
+        <p class="text-xs text-stone-500 dark:text-stone-400 mt-2">Unidades esta semana</p>
+      </div>
+
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-10 w-10 rounded-xl bg-amber-500 dark:bg-amber-600 flex items-center justify-center text-white">
+            <span class="material-icons-outlined text-lg">trending_up</span>
+          </div>
+          <p class="text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500 font-medium">Meta Mensual</p>
+        </div>
+        <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">82%</p>
+        <div class="w-full bg-stone-100 dark:bg-stone-800 h-2 rounded-full overflow-hidden mt-3">
+          <div class="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style="width: 82%"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Gráfico Principal -->
+    <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-8 relative overflow-hidden transition-colors duration-300">
+      
+      <div class="flex justify-between items-start mb-8 relative z-10">
+        <div>
+          <p class="text-xs uppercase tracking-wider text-stone-400 dark:text-stone-500 font-medium mb-2">Ventas de la Semana</p>
+          <h2 class="text-4xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">S/ {{ totalRevenue() | number:'1.0-0' }}</h2>
+          <div class="flex items-center gap-2 mt-3">
+            <span class="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-lg text-sm font-bold border border-emerald-100 dark:border-emerald-800">
+              ↗ +18.2%
+            </span>
+            <span class="text-sm text-stone-500 dark:text-stone-400">vs semana anterior</span>
+          </div>
+        </div>
+        
+        <div class="bg-stone-50 dark:bg-stone-950/50 p-1 rounded-xl flex gap-1 border border-stone-100 dark:border-stone-800">
+          <button class="px-4 py-2 rounded-lg bg-white dark:bg-stone-900 shadow-sm text-xs font-bold text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-700">
+            7 Días
+          </button>
+          <button class="px-4 py-2 rounded-lg text-xs font-medium text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-white/50 dark:hover:bg-stone-800/50 transition-colors">
+            30 Días
+          </button>
+          <button class="px-4 py-2 rounded-lg text-xs font-medium text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-white/50 dark:hover:bg-stone-800/50 transition-colors">
+            1 Año
+          </button>
+        </div>
+      </div>
+
+      <div class="h-64 w-full relative z-10">
+        <!-- ApexCharts Area Chart -->
+        <apx-chart
+          [series]="weeklyChartOptions().series!"
+          [chart]="weeklyChartOptions().chart!"
+          [xaxis]="weeklyChartOptions().xaxis!"
+          [yaxis]="weeklyChartOptions().yaxis!"
+          [colors]="weeklyChartOptions().colors!"
+          [fill]="weeklyChartOptions().fill!"
+          [stroke]="weeklyChartOptions().stroke!"
+          [grid]="weeklyChartOptions().grid!"
+          [tooltip]="weeklyChartOptions().tooltip!"
+          [dataLabels]="weeklyChartOptions().dataLabels!"
+        ></apx-chart>
+      </div>
+
+      <!-- Efecto decorativo -->
+      <div class="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+    </div>
+
+    <!-- Productos Top & Categorías -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Productos Más Vendidos -->
+      <div class="lg:col-span-2 bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-8 transition-colors duration-300">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-bold text-stone-800 dark:text-stone-100">Productos Más Vendidos</h3>
+          <span class="text-xs text-stone-400 dark:text-stone-500 font-medium">Esta semana</span>
+        </div>
+        
+        <div class="space-y-5">
+          @for (item of topProducts(); track item.name; let i = $index) {
+            <div class="flex items-center gap-4 group">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm border"
+                   [ngClass]="{
+                     'bg-yellow-50 text-yellow-700 border-yellow-200': i === 0,
+                     'bg-slate-50 text-slate-700 border-slate-200': i === 1,
+                     'bg-amber-50 text-amber-700 border-amber-200': i === 2,
+                     'bg-stone-50 text-stone-600 border-stone-200': i > 2
+                   }">
+                #{{ i + 1 }}
+              </div>
+              
+              <div class="flex-1">
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <p class="font-semibold text-stone-800 dark:text-stone-100">{{ item.name }}</p>
+                    <p class="text-xs text-stone-500 dark:text-stone-400">{{ item.sold }} unidades vendidas</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-lg font-bold text-stone-900 dark:text-stone-100">S/ {{ item.revenue | number:'1.0-0' }}</p>
+                    <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ item.trend }}</span>
+                  </div>
+                </div>
+                
+                <div class="w-full bg-stone-100 dark:bg-stone-800 h-2 rounded-full overflow-hidden">
+                  <div 
+                    class="h-full rounded-full transition-all duration-1000"
+                    [ngClass]="{
+                      'bg-yellow-500': i === 0,
+                      'bg-slate-400': i === 1,
+                      'bg-amber-500': i === 2,
+                      'bg-stone-400': i > 2
+                    }"
+                    [style.width.%]="(item.revenue / 7000) * 100"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Panel de Categorías -->
+      <div class="bg-stone-900 rounded-2xl p-8 text-white relative overflow-hidden border border-stone-800">
+        <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        
+        <h3 class="text-xl font-bold mb-6 text-white relative z-10">Distribución por Categoría</h3>
+        
+        <!-- ApexCharts Donut Chart -->
+        <div class="relative z-10">
+          <apx-chart
+            [series]="categoriesChartOptions().series!"
+            [chart]="categoriesChartOptions().chart!"
+            [labels]="categoriesChartOptions().labels!"
+            [colors]="categoriesChartOptions().colors!"
+            [plotOptions]="categoriesChartOptions().plotOptions!"
+            [legend]="categoriesChartOptions().legend!"
+            [dataLabels]="categoriesChartOptions().dataLabels!"
+          ></apx-chart>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Ventas por Vendedor -->
+    <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-8 transition-colors duration-300">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h3 class="text-2xl font-bold text-stone-800 dark:text-stone-100">Ventas por Vendedor</h3>
+          <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Comparativa de desempeño del equipo</p>
+        </div>
+        <span class="text-xs text-stone-400 dark:text-stone-500 font-medium">Este mes</span>
+      </div>
+
+      <!-- ApexCharts Bar Chart -->
+      <div class="mb-8">
+        <apx-chart
+          [series]="vendorChartOptions().series!"
+          [chart]="vendorChartOptions().chart!"
+          [plotOptions]="vendorChartOptions().plotOptions!"
+          [xaxis]="vendorChartOptions().xaxis!"
+          [yaxis]="vendorChartOptions().yaxis!"
+          [colors]="vendorChartOptions().colors!"
+          [grid]="vendorChartOptions().grid!"
+          [tooltip]="vendorChartOptions().tooltip!"
+          [dataLabels]="vendorChartOptions().dataLabels!"
+        ></apx-chart>
+      </div>
+
+      <!-- Tabla Comparativa -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        @for (vendor of vendorSalesWithPercentage(); track vendor.id; let i = $index) {
+          <div class="p-6 rounded-xl border transition-all hover:shadow-md"
+               [ngClass]="{
+                 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800': i === 0,
+                 'bg-slate-50 dark:bg-slate-900/20 border-slate-200 dark:border-slate-800': i === 1,
+                 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800': i === 2,
+                 'bg-stone-50 dark:bg-stone-800/50 border-stone-200 dark:border-stone-700': i > 2
+               }">
+            <!-- Header con posición y nombre -->
+            <div class="flex items-center gap-3 mb-4">
+              <div class="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm"
+                   [ngClass]="{
+                     'bg-yellow-500 text-white': i === 0,
+                     'bg-slate-400 text-white': i === 1,
+                     'bg-amber-500 text-white': i === 2,
+                     'bg-stone-400 text-white': i > 2
+                   }">
+                {{ vendor.name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="flex-1">
+                <p class="font-bold text-stone-900 dark:text-stone-100">{{ vendor.name }}</p>
+                <p class="text-xs text-stone-500 dark:text-stone-400">
+                  @if (i === 0) { 🥇 Top Vendedor }
+                  @else if (i === 1) { 🥈 Segundo Lugar }
+                  @else if (i === 2) { 🥉 Tercer Lugar }
+                  @else { Vendedor #{{ i + 1 }} }
+                </p>
+              </div>
+            </div>
+
+            <!-- Métricas -->
+            <div class="space-y-3">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400 font-medium mb-1">
+                  Ingresos Totales
+                </p>
+                <p class="text-2xl font-bold text-stone-900 dark:text-stone-100">
+                  S/ {{ vendor.revenue | number:'1.0-0' }}
+                </p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <p class="text-xs text-stone-500 dark:text-stone-400">Ventas</p>
+                  <p class="text-lg font-bold text-stone-900 dark:text-stone-100">{{ vendor.count }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-stone-500 dark:text-stone-400">Ticket Prom.</p>
+                  <p class="text-lg font-bold text-stone-900 dark:text-stone-100">S/ {{ vendor.avgTicket | number:'1.0-0' }}</p>
+                </div>
+              </div>
+
+              <!-- Barra de progreso -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs text-stone-500 dark:text-stone-400">Participación</span>
+                  <span class="text-xs font-bold text-stone-900 dark:text-stone-100">{{ vendor.percentage | number:'1.1-1' }}%</span>
+                </div>
+                <div class="w-full bg-stone-200 dark:bg-stone-700 h-2 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-1000"
+                       [ngClass]="{
+                         'bg-yellow-500': i === 0,
+                         'bg-slate-400': i === 1,
+                         'bg-amber-500': i === 2,
+                         'bg-stone-400': i > 2
+                       }"
+                       [style.width.%]="vendor.percentage">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+</div>

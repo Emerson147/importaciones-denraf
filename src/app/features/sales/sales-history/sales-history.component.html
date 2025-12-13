@@ -1,0 +1,294 @@
+<div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-4 sm:p-6 lg:p-8 transition-colors duration-300">
+  <div class="max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <app-ui-page-header 
+        title="Historial de Ventas"
+        subtitle="DenRaf • Registro completo de transacciones"
+        icon="📊"
+      />
+      
+      <!-- Botón Exportar con periodo actual -->
+      <app-ui-export-menu
+        [data]="exportData()"
+        type="sales"
+      />
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-4 sm:p-6 space-y-4 transition-colors duration-300">
+      
+      <!-- Búsqueda -->
+      <div class="relative max-w-md">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 material-icons-outlined text-stone-400 dark:text-stone-500 text-xl">search</span>
+        <input
+          type="text"
+          placeholder="Buscar por cliente, producto o número..."
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+          class="w-full pl-10 pr-4 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 focus:border-transparent transition-all text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-500 dark:placeholder:text-stone-400"
+        />
+      </div>
+
+      <!-- Filtros por periodo -->
+      <div class="flex flex-wrap gap-2">
+        <button
+          *ngFor="let period of [
+            { value: 'today', label: 'Hoy' },
+            { value: 'week', label: 'Esta semana' },
+            { value: 'month', label: 'Este mes' },
+            { value: 'all', label: 'Todas' }
+          ]"
+          (click)="selectedPeriod.set($any(period.value))"
+          [class.bg-stone-900]="selectedPeriod() === period.value"
+          [class.dark:bg-stone-100]="selectedPeriod() === period.value"
+          [class.text-white]="selectedPeriod() === period.value"
+          [class.dark:text-stone-900]="selectedPeriod() === period.value"
+          [class.bg-stone-100]="selectedPeriod() !== period.value"
+          [class.dark:bg-stone-800]="selectedPeriod() !== period.value"
+          [class.text-stone-600]="selectedPeriod() !== period.value"
+          [class.dark:text-stone-300]="selectedPeriod() !== period.value"
+          class="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105"
+        >
+          {{ period.label }}
+        </button>
+
+        <!-- Filtro por vendedor -->
+        <div class="ml-auto relative">
+          <div class="relative">
+            <span class="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 text-lg pointer-events-none">
+              person
+            </span>
+            <select
+              [value]="selectedVendor() || ''"
+              (change)="selectedVendor.set($any($event.target).value || null)"
+              class="pl-10 pr-4 py-2 rounded-xl text-sm font-medium bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 border-2 border-stone-200 dark:border-stone-700 focus:outline-none focus:border-stone-900 dark:focus:border-stone-100 transition-all appearance-none cursor-pointer hover:border-stone-400 dark:hover:border-stone-600"
+              style="min-width: 180px;"
+            >
+              <option value="">Todos</option>
+              <option value="user-1">Yo</option>
+              <option value="user-2">Mamá</option>
+              <option value="user-3">Hermano</option>
+            </select>
+            <span class="material-icons-outlined absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 text-lg pointer-events-none">
+              expand_more
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-stone-100 dark:border-stone-800">
+        <div class="text-center sm:text-left">
+          <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide font-medium mb-1">Total Ventas</p>
+          <p class="text-2xl font-bold text-stone-900 dark:text-stone-100">{{ summary().count }}</p>
+        </div>
+        <div class="text-center sm:text-left">
+          <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide font-medium mb-1">Ingresos</p>
+          <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">S/ {{ summary().total | number:'1.2-2' }}</p>
+        </div>
+        <div class="text-center sm:text-left">
+          <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide font-medium mb-1">Ticket Promedio</p>
+          <p class="text-2xl font-bold text-stone-900 dark:text-stone-100">S/ {{ summary().average | number:'1.2-2' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de ventas -->
+    <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden transition-colors duration-300">
+      
+      @if (filteredSales().length === 0) {
+        <app-ui-empty-state
+          icon="receipt_long"
+          title="No hay ventas registradas"
+          description="Las ventas aparecerán aquí una vez que realices transacciones"
+        />
+      } @else {
+        <!-- Tabla responsive -->
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-stone-50 dark:bg-stone-950/50 border-b border-stone-100 dark:border-stone-800">
+              <tr>
+                <th class="px-4 sm:px-6 py-4 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Venta</th>
+                <th class="px-4 sm:px-6 py-4 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Fecha</th>
+                <th class="px-4 sm:px-6 py-4 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider hidden sm:table-cell">Cliente</th>
+                <th class="px-4 sm:px-6 py-4 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Productos</th>
+                <th class="px-4 sm:px-6 py-4 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider hidden md:table-cell">Pago</th>
+                <th class="px-4 sm:px-6 py-4 text-right text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Total</th>
+                <th class="px-4 sm:px-6 py-4 text-center text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider hidden lg:table-cell">Estado</th>
+                <th class="px-4 sm:px-6 py-4 text-center text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Acción</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100 dark:divide-stone-800">
+              @for (sale of filteredSales(); track sale.id) {
+                <tr class="hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors">
+                  <!-- Número de venta -->
+                  <td class="px-4 sm:px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <span class="material-icons-outlined text-stone-400 dark:text-stone-500 text-lg">receipt</span>
+                      <span class="text-sm font-medium text-stone-900 dark:text-stone-100">{{ sale.saleNumber }}</span>
+                      <!-- Badge vendedor -->
+                      <div 
+                        class="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                        [class]="getVendorColor(sale.vendedorId)"
+                        [title]="getVendorName(sale.vendedorId)"
+                      >
+                        {{ getVendorInitial(sale.vendedorId) }}
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Fecha -->
+                  <td class="px-4 sm:px-6 py-4 text-sm text-stone-600 dark:text-stone-400">
+                    {{ sale.date | date:'short' }}
+                  </td>
+
+                  <!-- Cliente -->
+                  <td class="px-4 sm:px-6 py-4 text-sm text-stone-600 dark:text-stone-400 hidden sm:table-cell">
+                    {{ sale.customer?.name || 'Cliente casual' }}
+                  </td>
+
+                  <!-- Productos -->
+                  <td class="px-4 sm:px-6 py-4">
+                    <div class="flex flex-col gap-1">
+                      @for (item of sale.items.slice(0, 2); track item.productId) {
+                        <span class="text-xs text-stone-600 dark:text-stone-400">{{ item.quantity }}x {{ item.productName }}</span>
+                      }
+                      @if (sale.items.length > 2) {
+                        <span class="text-xs text-stone-400 dark:text-stone-500">+{{ sale.items.length - 2 }} más</span>
+                      }
+                    </div>
+                  </td>
+
+                  <!-- Método de pago -->
+                  <td class="px-4 sm:px-6 py-4 text-sm text-stone-600 dark:text-stone-400 hidden md:table-cell">
+                    {{ getPaymentMethodLabel(sale.paymentMethod) }}
+                  </td>
+
+                  <!-- Total -->
+                  <td class="px-4 sm:px-6 py-4 text-right">
+                    <span class="text-sm font-bold text-stone-900 dark:text-stone-100">S/ {{ sale.total | number:'1.2-2' }}</span>
+                  </td>
+
+                  <!-- Estado -->
+                  <td class="px-4 sm:px-6 py-4 text-center hidden lg:table-cell">
+                    <span 
+                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                      [class]="getStatusBadge(sale.status).class"
+                    >
+                      {{ getStatusBadge(sale.status).label }}
+                    </span>
+                  </td>
+
+                  <!-- Acciones -->
+                  <td class="px-4 sm:px-6 py-4 text-center">
+                    <button
+                      (click)="viewSaleDetails(sale)"
+                      class="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors"
+                      title="Ver detalles"
+                    >
+                      <span class="material-icons-outlined text-lg">visibility</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <!-- Modal de detalles (si hay venta seleccionada) -->
+    @if (selectedSale()) {
+      <div 
+        class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        (click)="closeDetails()"
+      >
+        <div 
+          class="bg-white dark:bg-stone-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transition-colors duration-300"
+          (click)="$event.stopPropagation()"
+        >
+          <!-- Header del modal -->
+          <div class="sticky top-0 bg-white dark:bg-stone-900 border-b border-stone-100 dark:border-stone-800 p-6 flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-bold text-stone-900 dark:text-stone-100">{{ selectedSale()!.saleNumber }}</h3>
+              <p class="text-sm text-stone-500 dark:text-stone-400">{{ selectedSale()!.date | date:'medium' }}</p>
+            </div>
+            <button
+              (click)="closeDetails()"
+              class="h-10 w-10 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
+            >
+              <span class="material-icons-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Contenido del modal -->
+          <div class="p-6 space-y-6">
+            
+            <!-- Cliente -->
+            @if (selectedSale()!.customer) {
+              <div>
+                <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide font-medium mb-2">Cliente</p>
+                <p class="text-sm font-medium text-stone-900 dark:text-stone-100">{{ selectedSale()!.customer!.name }}</p>
+                @if (selectedSale()!.customer!.phone) {
+                  <p class="text-sm text-stone-600 dark:text-stone-400">{{ selectedSale()!.customer!.phone }}</p>
+                }
+              </div>
+            }
+
+            <!-- Productos -->
+            <div>
+              <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide font-medium mb-3">Productos</p>
+              <div class="space-y-2">
+                @for (item of selectedSale()!.items; track item.productId) {
+                  <div class="flex items-center justify-between py-2 border-b border-stone-100 dark:border-stone-800">
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-stone-900 dark:text-stone-100">{{ item.productName }}</p>
+                      <p class="text-xs text-stone-500 dark:text-stone-400">Talla: {{ item.size }} • Cantidad: {{ item.quantity }}</p>
+                    </div>
+                    <p class="text-sm font-bold text-stone-900 dark:text-stone-100">S/ {{ item.subtotal | number:'1.2-2' }}</p>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Totales -->
+            <div class="bg-stone-50 dark:bg-stone-950/50 rounded-xl p-4 space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-stone-600 dark:text-stone-400">Subtotal</span>
+                <span class="font-medium text-stone-900 dark:text-stone-100">S/ {{ selectedSale()!.subtotal | number:'1.2-2' }}</span>
+              </div>
+              @if (selectedSale()!.discount > 0) {
+                <div class="flex justify-between text-sm">
+                  <span class="text-stone-600 dark:text-stone-400">Descuento</span>
+                  <span class="font-medium text-rose-600 dark:text-rose-400">-S/ {{ selectedSale()!.discount | number:'1.2-2' }}</span>
+                </div>
+              }
+              <div class="flex justify-between text-base font-bold pt-2 border-t border-stone-200 dark:border-stone-800">
+                <span class="text-stone-900 dark:text-stone-100">Total</span>
+                <span class="text-emerald-600 dark:text-emerald-400">S/ {{ selectedSale()!.total | number:'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <!-- Método de pago -->
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide font-medium">Método de pago</p>
+              <span class="px-3 py-1 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-full text-sm font-medium">
+                {{ getPaymentMethodLabel(selectedSale()!.paymentMethod) }}
+              </span>
+            </div>
+
+            <!-- Notas -->
+            @if (selectedSale()!.notes) {
+              <div>
+                <p class="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide font-medium mb-2">Notas</p>
+                <p class="text-sm text-stone-600 dark:text-stone-400">{{ selectedSale()!.notes }}</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

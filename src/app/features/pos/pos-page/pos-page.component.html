@@ -1,0 +1,132 @@
+<div class="flex h-[calc(100vh-2rem)] gap-6 p-6 max-w-[1600px] mx-auto">
+  
+  <div class="flex-1 flex flex-col gap-6">
+    
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-serif font-bold text-stone-800 dark:text-stone-100">Punto de Venta</h1>
+        <p class="text-stone-500 dark:text-stone-400 text-sm">Selecciona las prendas para agregar.</p>
+      </div>
+      <div class="w-72">
+        <app-ui-input 
+          placeholder="Buscar prenda..." 
+          class="bg-white border-stone-200 rounded-xl shadow-sm"
+          (valueChange)="searchQuery.set($event)"
+        ></app-ui-input>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto no-scrollbar pr-2">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        
+        @for (product of filteredProducts(); track product.id) {
+          <button 
+            class="group relative flex flex-col text-left bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm hover:shadow-md hover:border-stone-300 dark:hover:border-stone-600 transition-all overflow-hidden"
+            (click)="addToCart(product)"
+          >
+            <div class="aspect-3/4 w-full overflow-hidden bg-stone-100 dark:bg-stone-800 relative">
+              <img [src]="product.image" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" alt="">
+              
+              <span class="absolute top-2 right-2 bg-white/95 dark:bg-stone-900/95 text-[10px] font-bold px-2 py-1 rounded-md text-stone-600 dark:text-stone-300 shadow-sm">
+                {{ product.stock }} un.
+              </span>
+            </div>
+
+            <div class="p-3">
+              <p class="text-xs text-stone-400 dark:text-stone-500 font-medium uppercase tracking-wide mb-0.5">{{ product.category }}</p>
+              <h3 class="text-sm font-semibold text-stone-800 dark:text-stone-200 line-clamp-1 group-hover:text-stone-600 dark:group-hover:text-stone-400">{{ product.name }}</h3>
+              <p class="mt-1 text-base font-bold text-stone-900 dark:text-stone-100">S/ {{ product.price }}</p>
+            </div>
+
+            <div class="absolute inset-0 bg-black/5 dark:bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <div class="bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 rounded-full p-3 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                <span class="material-icons-outlined">add_shopping_cart</span>
+              </div>
+            </div>
+          </button>
+        }
+
+      </div>
+    </div>
+  </div>
+
+
+  <div class="w-96 flex flex-col bg-white dark:bg-stone-900 rounded-2rem border border-stone-100 dark:border-stone-800 shadow-xl shadow-stone-200/50 dark:shadow-stone-950/50 overflow-hidden transition-colors duration-300">
+    
+    <div class="p-6 border-b border-stone-50 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-950/50">
+      <h2 class="text-lg font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2">
+        <span class="material-icons-outlined text-stone-400 dark:text-stone-500">receipt_long</span>
+        Ticket de Venta
+      </h2>
+      <p class="text-xs text-stone-400 dark:text-stone-500 mt-1">Orden #{{ 4030 + 1 }} • {{ cart().length }} items</p>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+      @if (cart().length === 0) {
+        <div class="h-full flex flex-col items-center justify-center text-stone-300 dark:text-stone-600 space-y-2 opacity-50">
+          <span class="material-icons-outlined text-4xl">shopping_bag</span>
+          <p class="text-sm font-medium">El carrito está vacío</p>
+        </div>
+      }
+
+      @for (item of cart(); track item.product.id) {
+        <div class="flex gap-3 items-center animate-in slide-in-from-right-4 duration-300">
+          <div class="h-12 w-12 rounded-lg bg-stone-100 dark:bg-stone-800 overflow-hidden shrink-0 border border-stone-100 dark:border-stone-700">
+            <img [src]="item.product.image" class="h-full w-full object-cover">
+          </div>
+          
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-stone-800 dark:text-stone-200 truncate">{{ item.product.name }}</p>
+            <p class="text-xs text-stone-400 dark:text-stone-500">S/ {{ item.product.price }} c/u</p>
+          </div>
+
+          <div class="flex items-center gap-2 bg-stone-50 rounded-lg p-1 border border-stone-100">
+            <button (click)="updateQuantity(item.product.id, -1)" class="w-6 h-6 flex items-center justify-center rounded-md bg-white hover:bg-stone-200 text-stone-600 text-xs shadow-sm transition-colors">-</button>
+            <span class="text-xs font-bold w-4 text-center">{{ item.quantity }}</span>
+            <button (click)="updateQuantity(item.product.id, 1)" class="w-6 h-6 flex items-center justify-center rounded-md bg-stone-900 text-white text-xs shadow-sm hover:bg-black transition-colors">+</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="p-6 bg-stone-50 border-t border-stone-100 space-y-3">
+      <div class="flex justify-between text-sm text-stone-500">
+        <span>Subtotal</span>
+        <span>S/ {{ subtotal() | number:'1.2-2' }}</span>
+      </div>
+      <div class="flex justify-between text-sm text-stone-500">
+        <span>IGV (18%)</span>
+        <span>S/ {{ tax() | number:'1.2-2' }}</span>
+      </div>
+      <div class="flex justify-between text-xl font-bold text-stone-900 pt-3 border-t border-stone-200">
+        <span>Total</span>
+        <span>S/ {{ total() | number:'1.2-2' }}</span>
+      </div>
+
+      <app-ui-button 
+        class="w-full py-4 text-base rounded-xl bg-stone-900 hover:bg-black text-white shadow-lg mt-4"
+        [disabled]="cart().length === 0"
+        (onClick)="checkout()"
+      >
+        Cobrar S/ {{ total() | number:'1.2-2' }}
+      </app-ui-button>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- En tu pos.component.html -->
+<app-ui-ticket
+  [isOpen]="showTicket()"
+  [items]="cart()"
+  [total]="total()"
+  [ticketNumber]="currentTicketNumber"
+  [clientName]="clientName"
+  [clientPhone]="clientPhone"
+  [paymentMethod]="paymentMethod"
+  [amountPaid]="amountPaid"
+  (closeTicket)="onTicketClosed()"
+  (ticketPrinted)="onTicketPrinted()"
+  (ticketSent)="onTicketSent()"
+></app-ui-ticket>
