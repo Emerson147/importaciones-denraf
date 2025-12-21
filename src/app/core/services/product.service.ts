@@ -307,7 +307,7 @@ export class ProductService {
 
         const newProduct: Product = {
           ...product,
-          id: `PROD-${Date.now()}`,
+          id: crypto.randomUUID(),
           createdAt: new Date(),
           updatedAt: new Date(),
         };
