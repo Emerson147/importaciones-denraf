@@ -40,7 +40,7 @@ export interface PeriodComparison {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AnalyticsService {
   private salesService = inject(SalesService);
@@ -67,7 +67,7 @@ export class AnalyticsService {
       current,
       previous,
       change,
-      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable'
+      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
     };
   });
 
@@ -90,7 +90,7 @@ export class AnalyticsService {
       current,
       previous,
       change,
-      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable'
+      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
     };
   });
 
@@ -100,9 +100,7 @@ export class AnalyticsService {
     const previousWeek = this.getPreviousWeekSales();
 
     const calculateAvg = (sales: Sale[]) => {
-      return sales.length > 0 
-        ? sales.reduce((sum, s) => sum + s.total, 0) / sales.length 
-        : 0;
+      return sales.length > 0 ? sales.reduce((sum, s) => sum + s.total, 0) / sales.length : 0;
     };
 
     const current = calculateAvg(currentWeek);
@@ -113,7 +111,7 @@ export class AnalyticsService {
       current,
       previous,
       change,
-      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable'
+      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
     };
   });
 
@@ -123,7 +121,7 @@ export class AnalyticsService {
     const previousWeek = this.getPreviousWeekSales();
 
     const calculateRate = (sales: Sale[]) => {
-      const completed = sales.filter(s => s.status === 'completed').length;
+      const completed = sales.filter((s) => s.status === 'completed').length;
       return sales.length > 0 ? (completed / sales.length) * 100 : 0;
     };
 
@@ -135,7 +133,7 @@ export class AnalyticsService {
       current,
       previous,
       change,
-      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable'
+      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
     };
   });
 
@@ -145,8 +143,8 @@ export class AnalyticsService {
     const allSales = this.salesService.allSales();
     const productMap = new Map<string, ProductProfitability>();
 
-    allSales.forEach(sale => {
-      sale.items.forEach(item => {
+    allSales.forEach((sale) => {
+      (sale.items || []).forEach((item) => {
         const key = item.productId;
         const existing = productMap.get(key);
 
@@ -160,18 +158,16 @@ export class AnalyticsService {
           existing.revenue += revenue;
           existing.estimatedCost += estimatedCost;
           existing.profit += profit;
-          existing.margin = existing.revenue > 0 
-            ? (existing.profit / existing.revenue) * 100 
-            : 0;
+          existing.margin = existing.revenue > 0 ? (existing.profit / existing.revenue) * 100 : 0;
         } else {
           productMap.set(key, {
             productId: item.productId,
-            productName: item.productId, // TODO: obtener nombre real del producto
+            productName: item.productName || item.productId,
             totalSold: item.quantity,
             revenue,
             estimatedCost,
             profit,
-            margin
+            margin,
           });
         }
       });
@@ -204,7 +200,7 @@ export class AnalyticsService {
       const currentDayStart = new Date(currentDate.setHours(0, 0, 0, 0));
       const currentDayEnd = new Date(currentDate.setHours(23, 59, 59, 999));
 
-      const currentDaySales = this.salesService.allSales().filter(sale => {
+      const currentDaySales = this.salesService.allSales().filter((sale) => {
         const saleDate = new Date(sale.date);
         return saleDate >= currentDayStart && saleDate <= currentDayEnd;
       });
@@ -216,7 +212,7 @@ export class AnalyticsService {
       const previousDayStart = new Date(previousDate.setHours(0, 0, 0, 0));
       const previousDayEnd = new Date(previousDate.setHours(23, 59, 59, 999));
 
-      const previousDaySales = this.salesService.allSales().filter(sale => {
+      const previousDaySales = this.salesService.allSales().filter((sale) => {
         const saleDate = new Date(sale.date);
         return saleDate >= previousDayStart && saleDate <= previousDayEnd;
       });
@@ -228,25 +224,26 @@ export class AnalyticsService {
         sales: current.length,
         revenue: currentRevenue,
         avgTicket: current.length > 0 ? currentRevenue / current.length : 0,
-        dailyData: currentDailyData
+        dailyData: currentDailyData,
       },
       previous: {
         sales: previous.length,
         revenue: previousRevenue,
         avgTicket: previous.length > 0 ? previousRevenue / previous.length : 0,
-        dailyData: previousDailyData
+        dailyData: previousDailyData,
       },
       growth: {
-        sales: previous.length > 0 
-          ? ((current.length - previous.length) / previous.length) * 100 
-          : 0,
-        revenue: previousRevenue > 0 
-          ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
-          : 0,
-        avgTicket: previous.length > 0 && current.length > 0
-          ? ((currentRevenue / current.length - previousRevenue / previous.length) / (previousRevenue / previous.length)) * 100
-          : 0
-      }
+        sales:
+          previous.length > 0 ? ((current.length - previous.length) / previous.length) * 100 : 0,
+        revenue:
+          previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0,
+        avgTicket:
+          previous.length > 0 && current.length > 0
+            ? ((currentRevenue / current.length - previousRevenue / previous.length) /
+                (previousRevenue / previous.length)) *
+              100
+            : 0,
+      },
     };
   });
 
@@ -267,7 +264,7 @@ export class AnalyticsService {
       const currentDayStart = new Date(currentDate.setHours(0, 0, 0, 0));
       const currentDayEnd = new Date(currentDate.setHours(23, 59, 59, 999));
 
-      const currentDaySales = this.salesService.allSales().filter(sale => {
+      const currentDaySales = this.salesService.allSales().filter((sale) => {
         const saleDate = new Date(sale.date);
         return saleDate >= currentDayStart && saleDate <= currentDayEnd;
       });
@@ -281,7 +278,7 @@ export class AnalyticsService {
       const previousDayStart = new Date(previousDate.setHours(0, 0, 0, 0));
       const previousDayEnd = new Date(previousDate.setHours(23, 59, 59, 999));
 
-      const previousDaySales = this.salesService.allSales().filter(sale => {
+      const previousDaySales = this.salesService.allSales().filter((sale) => {
         const saleDate = new Date(sale.date);
         return saleDate >= previousDayStart && saleDate <= previousDayEnd;
       });
@@ -296,7 +293,7 @@ export class AnalyticsService {
     return {
       current: currentWeekRevenues,
       previous: previousWeekRevenues,
-      labels
+      labels,
     };
   });
 
@@ -311,7 +308,7 @@ export class AnalyticsService {
     return {
       projectedRevenue: avgWeeklySales,
       projectedSalesCount: Math.round(avgWeeklyCount),
-      confidence: last4Weeks.length > 10 ? 'high' : last4Weeks.length > 5 ? 'medium' : 'low'
+      confidence: last4Weeks.length > 10 ? 'high' : last4Weeks.length > 5 ? 'medium' : 'low',
     };
   });
 
@@ -323,7 +320,7 @@ export class AnalyticsService {
     weekStart.setDate(now.getDate() - now.getDay()); // Domingo
     weekStart.setHours(0, 0, 0, 0);
 
-    return this.salesService.allSales().filter(sale => {
+    return this.salesService.allSales().filter((sale) => {
       const saleDate = new Date(sale.date);
       return saleDate >= weekStart;
     });
@@ -338,7 +335,7 @@ export class AnalyticsService {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
 
-    return this.salesService.allSales().filter(sale => {
+    return this.salesService.allSales().filter((sale) => {
       const saleDate = new Date(sale.date);
       return saleDate >= weekStart && saleDate < weekEnd;
     });
@@ -348,7 +345,7 @@ export class AnalyticsService {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    return this.salesService.allSales().filter(sale => {
+    return this.salesService.allSales().filter((sale) => {
       const saleDate = new Date(sale.date);
       return saleDate >= monthStart;
     });
@@ -359,7 +356,7 @@ export class AnalyticsService {
     const monthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    return this.salesService.allSales().filter(sale => {
+    return this.salesService.allSales().filter((sale) => {
       const saleDate = new Date(sale.date);
       return saleDate >= monthStart && saleDate <= monthEnd;
     });
@@ -371,7 +368,7 @@ export class AnalyticsService {
     fourWeeksAgo.setDate(now.getDate() - 28);
     fourWeeksAgo.setHours(0, 0, 0, 0);
 
-    return this.salesService.allSales().filter(sale => {
+    return this.salesService.allSales().filter((sale) => {
       const saleDate = new Date(sale.date);
       return saleDate >= fourWeeksAgo;
     });

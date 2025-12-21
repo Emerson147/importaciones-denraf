@@ -25,11 +25,11 @@ export class SalesHistoryComponent {
   selectedPayment = signal<string | null>(null);
   selectedStatus = signal<string | null>(null);
   selectedVendor = signal<string | null>(null); // Filtro por vendedor
-  
+
   constructor() {
     // Cargar ventas desde localStorage al iniciar
     this.salesService.loadFromLocalStorage();
-    
+
     // Escuchar actualizaciones de ventas offline sincronizadas
     window.addEventListener('sales-updated', () => {
       console.log('📡 Detectado evento sales-updated, recargando ventas...');
@@ -57,26 +57,27 @@ export class SalesHistoryComponent {
     // Filtro por búsqueda
     const query = this.searchQuery().toLowerCase();
     if (query) {
-      sales = sales.filter(s =>
-        s.saleNumber.toLowerCase().includes(query) ||
-        s.customer?.name.toLowerCase().includes(query) ||
-        s.items.some(item => item.productName.toLowerCase().includes(query))
+      sales = sales.filter(
+        (s) =>
+          s.saleNumber.toLowerCase().includes(query) ||
+          s.customer?.name.toLowerCase().includes(query) ||
+          (s.items || []).some((item) => item.productName.toLowerCase().includes(query))
       );
     }
 
     // Filtro por método de pago
     if (this.selectedPayment()) {
-      sales = sales.filter(s => s.paymentMethod === this.selectedPayment());
+      sales = sales.filter((s) => s.paymentMethod === this.selectedPayment());
     }
 
     // Filtro por estado
     if (this.selectedStatus()) {
-      sales = sales.filter(s => s.status === this.selectedStatus());
+      sales = sales.filter((s) => s.status === this.selectedStatus());
     }
 
     // Filtro por vendedor
     if (this.selectedVendor()) {
-      sales = sales.filter(s => s.vendedorId === this.selectedVendor());
+      sales = sales.filter((s) => s.vendedorId === this.selectedVendor());
     }
 
     return sales;
@@ -88,7 +89,7 @@ export class SalesHistoryComponent {
     return {
       count: sales.length,
       total: sales.reduce((sum, s) => sum + s.total, 0),
-      average: sales.length > 0 ? sales.reduce((sum, s) => sum + s.total, 0) / sales.length : 0
+      average: sales.length > 0 ? sales.reduce((sum, s) => sum + s.total, 0) / sales.length : 0,
     };
   });
 
@@ -97,18 +98,23 @@ export class SalesHistoryComponent {
 
   // Datos formateados para exportación
   exportData = computed(() => {
-    return this.filteredSales().map(sale => ({
+    return this.filteredSales().map((sale) => ({
       'Nº Venta': sale.saleNumber,
-      'Fecha': new Date(sale.date).toLocaleDateString('es-PE'),
-      'Hora': new Date(sale.date).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
-      'Cliente': sale.customer?.name || 'Cliente General',
-      'Vendedor': sale.createdBy || 'Usuario POS',
-      'Items': sale.items.length,
-      'Subtotal': sale.subtotal.toFixed(2),
-      'Descuento': sale.discount.toFixed(2),
-      'Total': sale.total.toFixed(2),
+      Fecha: new Date(sale.date).toLocaleDateString('es-PE'),
+      Hora: new Date(sale.date).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+      Cliente: sale.customer?.name || 'Cliente General',
+      Vendedor: sale.createdBy || 'Usuario POS',
+      Items: sale.items?.length ?? 0,
+      Subtotal: sale.subtotal.toFixed(2),
+      Descuento: sale.discount.toFixed(2),
+      Total: sale.total.toFixed(2),
       'Método Pago': this.getPaymentMethodLabel(sale.paymentMethod),
-      'Estado': sale.status === 'completed' ? 'Completada' : sale.status === 'pending' ? 'Pendiente' : 'Cancelada'
+      Estado:
+        sale.status === 'completed'
+          ? 'Completada'
+          : sale.status === 'pending'
+          ? 'Pendiente'
+          : 'Cancelada',
     }));
   });
 
@@ -118,7 +124,7 @@ export class SalesHistoryComponent {
       today: 'Hoy',
       week: 'Esta Semana',
       month: 'Este Mes',
-      all: 'Todas'
+      all: 'Todas',
     };
     return labels[this.selectedPeriod()];
   });
@@ -148,7 +154,7 @@ export class SalesHistoryComponent {
       card: 'Tarjeta',
       transfer: 'Transferencia',
       yape: 'Yape',
-      plin: 'Plin'
+      plin: 'Plin',
     };
     return labels[method] || method;
   }
@@ -157,13 +163,13 @@ export class SalesHistoryComponent {
     const badges: Record<string, { label: string; class: string }> = {
       completed: { label: 'Completada', class: 'bg-emerald-100 text-emerald-700' },
       pending: { label: 'Pendiente', class: 'bg-amber-100 text-amber-700' },
-      cancelled: { label: 'Cancelada', class: 'bg-rose-100 text-rose-700' }
+      cancelled: { label: 'Cancelada', class: 'bg-rose-100 text-rose-700' },
     };
     return badges[status] || { label: status, class: 'bg-stone-100 text-stone-700' };
   }
 
   getVendorName(vendedorId: string): string {
-    const user = this.authService.getAvailableUsers().find(u => u.id === vendedorId);
+    const user = this.authService.getAvailableUsers().find((u) => u.id === vendedorId);
     return user?.name || 'Usuario';
   }
 
@@ -176,7 +182,7 @@ export class SalesHistoryComponent {
     const colors: Record<string, string> = {
       'user-1': 'bg-blue-100 text-blue-700',
       'user-2': 'bg-purple-100 text-purple-700',
-      'user-3': 'bg-green-100 text-green-700'
+      'user-3': 'bg-green-100 text-green-700',
     };
     return colors[vendedorId] || 'bg-stone-100 text-stone-700';
   }

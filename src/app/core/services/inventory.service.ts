@@ -34,7 +34,7 @@ export interface InventoryMetrics {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class InventoryService {
   private salesService = inject(SalesService);
@@ -55,22 +55,24 @@ export class InventoryService {
     const products = this.productService.products();
     const sales = this.salesService.sales();
     const today = new Date();
-    const analysisStartDate = new Date(today.getTime() - (this.ANALYSIS_DAYS * 24 * 60 * 60 * 1000));
+    const analysisStartDate = new Date(today.getTime() - this.ANALYSIS_DAYS * 24 * 60 * 60 * 1000);
 
-    return products.map(product => {
+    return products.map((product) => {
       // Filtrar ventas de este producto en el período
-      const productSales = sales.filter(sale => {
+      const productSales = sales.filter((sale) => {
         const saleDate = new Date(sale.date);
-        return saleDate >= analysisStartDate && 
-               sale.items.some(item => item.productId === product.id);
+        return (
+          saleDate >= analysisStartDate &&
+          (sale.items || []).some((item) => item.productId === product.id)
+        );
       });
 
       // Calcular unidades vendidas y revenue
       let totalSold = 0;
       let revenue = 0;
 
-      productSales.forEach(sale => {
-        sale.items.forEach(item => {
+      productSales.forEach((sale) => {
+        (sale.items || []).forEach((item) => {
           if (item.productId === product.id) {
             totalSold += item.quantity;
             revenue += item.subtotal;
@@ -82,9 +84,8 @@ export class InventoryService {
       const rotationRate = totalSold / this.ANALYSIS_DAYS;
 
       // Días hasta agotamiento
-      const daysUntilStockout = rotationRate > 0 
-        ? Math.floor(product.stock / rotationRate) 
-        : Infinity;
+      const daysUntilStockout =
+        rotationRate > 0 ? Math.floor(product.stock / rotationRate) : Infinity;
 
       // Determinar estado del producto
       let status: ProductAnalysis['status'];
@@ -123,7 +124,7 @@ export class InventoryService {
         daysUntilStockout,
         status,
         demandLevel,
-        reorderQuantity
+        reorderQuantity,
       };
     });
   });
@@ -135,7 +136,7 @@ export class InventoryService {
     const analytics = this.productAnalytics();
     const alerts: StockAlert[] = [];
 
-    analytics.forEach(analysis => {
+    analytics.forEach((analysis) => {
       const { product, status, daysUntilStockout } = analysis;
 
       // Alerta de stock crítico
@@ -146,7 +147,7 @@ export class InventoryService {
           alertType: 'critical',
           message: `¡Stock crítico! Solo quedan ${product.stock} unidades`,
           priority: 'high',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
       }
 
@@ -158,7 +159,7 @@ export class InventoryService {
           alertType: 'stockout',
           message: 'Producto agotado. Reabastecer urgente.',
           priority: 'high',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
       }
 
@@ -170,7 +171,7 @@ export class InventoryService {
           alertType: 'low',
           message: `Stock bajo. ${daysUntilStockout} días hasta agotamiento`,
           priority: 'medium',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
       }
 
@@ -182,7 +183,7 @@ export class InventoryService {
           alertType: 'overstock',
           message: 'Stock excesivo. Considerar promoción.',
           priority: 'low',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
       }
     });
@@ -200,20 +201,19 @@ export class InventoryService {
     const analytics = this.productAnalytics();
     const products = this.productService.products();
 
-    const totalValue = products.reduce((sum: number, p: any) => sum + (p.cost * p.stock), 0);
-    const rotations = analytics.map(a => a.rotationRate).filter(r => r > 0);
-    const averageRotation = rotations.length > 0 
-      ? rotations.reduce((sum, r) => sum + r, 0) / rotations.length 
-      : 0;
+    const totalValue = products.reduce((sum: number, p: any) => sum + p.cost * p.stock, 0);
+    const rotations = analytics.map((a) => a.rotationRate).filter((r) => r > 0);
+    const averageRotation =
+      rotations.length > 0 ? rotations.reduce((sum, r) => sum + r, 0) / rotations.length : 0;
 
     return {
       totalProducts: products.length,
       totalValue,
       averageRotation,
-      criticalProducts: analytics.filter(a => a.status === 'critical').length,
-      lowStockProducts: analytics.filter(a => a.status === 'low').length,
-      overstockedProducts: analytics.filter(a => a.status === 'overstocked').length,
-      outOfStockProducts: products.filter((p: any) => p.stock === 0).length
+      criticalProducts: analytics.filter((a) => a.status === 'critical').length,
+      lowStockProducts: analytics.filter((a) => a.status === 'low').length,
+      overstockedProducts: analytics.filter((a) => a.status === 'overstocked').length,
+      outOfStockProducts: products.filter((p: any) => p.stock === 0).length,
     };
   });
 
@@ -222,7 +222,7 @@ export class InventoryService {
    */
   criticalProducts = computed(() => {
     return this.productAnalytics()
-      .filter(a => a.status === 'critical' || a.product.stock === 0)
+      .filter((a) => a.status === 'critical' || a.product.stock === 0)
       .sort((a, b) => a.product.stock - b.product.stock);
   });
 
@@ -231,7 +231,7 @@ export class InventoryService {
    */
   highDemandProducts = computed(() => {
     return this.productAnalytics()
-      .filter(a => a.demandLevel === 'high')
+      .filter((a) => a.demandLevel === 'high')
       .sort((a, b) => b.rotationRate - a.rotationRate)
       .slice(0, 10);
   });
@@ -241,7 +241,7 @@ export class InventoryService {
    */
   lowRotationProducts = computed(() => {
     return this.productAnalytics()
-      .filter(a => a.demandLevel === 'low' && a.product.stock > 0)
+      .filter((a) => a.demandLevel === 'low' && a.product.stock > 0)
       .sort((a, b) => a.rotationRate - b.rotationRate)
       .slice(0, 10);
   });
@@ -251,9 +251,10 @@ export class InventoryService {
    */
   reorderSuggestions = computed(() => {
     return this.productAnalytics()
-      .filter(a => 
-        a.reorderQuantity > 0 && 
-        (a.status === 'critical' || a.status === 'low' || a.product.stock === 0)
+      .filter(
+        (a) =>
+          a.reorderQuantity > 0 &&
+          (a.status === 'critical' || a.status === 'low' || a.product.stock === 0)
       )
       .sort((a, b) => {
         // Priorizar por urgencia (días hasta agotamiento)
@@ -279,7 +280,7 @@ export class InventoryService {
       category,
       count: items.length,
       totalStock: items.reduce((sum, p) => sum + p.stock, 0),
-      totalValue: items.reduce((sum, p) => sum + (p.cost * p.stock), 0)
+      totalValue: items.reduce((sum, p) => sum + p.cost * p.stock, 0),
     }));
   });
 }

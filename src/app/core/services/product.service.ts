@@ -23,11 +23,17 @@ export class ProductService {
   // ✅ FUENTE ÚNICA DE VERDAD - Todos los productos del sistema
   private productsSignal = signal<Product[]>(this.loadFromStorage());
 
+  // 🔒 Flag para evitar guardar a localStorage datos que vienen de Supabase
+  private skipLocalStorageSave = false;
+
   constructor() {
     // Auto-guardado en LocalStorage cuando cambian los productos
     effect(() => {
       const products = this.productsSignal();
-      this.saveToStorage(products);
+      // Solo guardar si no estamos cargando desde Supabase
+      if (!this.skipLocalStorageSave) {
+        this.saveToStorage(products);
+      }
     });
 
     // 🔄 Cargar datos desde Supabase al iniciar (si hay conexión)
@@ -44,7 +50,13 @@ export class ProductService {
 
       if (products.length > 0) {
         console.log(`☁️ Cargados ${products.length} productos desde Supabase`);
+        // 🔒 Evitar guardar a localStorage (Supabase es la fuente de verdad)
+        this.skipLocalStorageSave = true;
         this.productsSignal.set(products);
+        // Restablecer flag después de un tick
+        setTimeout(() => {
+          this.skipLocalStorageSave = false;
+        }, 0);
       }
     } catch (error) {
       console.log('📴 Sin conexión, usando datos locales');
@@ -63,7 +75,12 @@ export class ProductService {
    * Guardar productos en LocalStorage
    */
   private saveToStorage(products: Product[]): void {
-    this.storage.set(this.STORAGE_KEY, products);
+    try {
+      this.storage.set(this.STORAGE_KEY, products);
+    } catch (error) {
+      // Silenciar error de quota - Supabase tiene los datos
+      console.warn('⚠️ No se pudo guardar en localStorage (quota excedida)');
+    }
   }
 
   /**

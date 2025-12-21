@@ -91,7 +91,7 @@ export class SalesService {
     const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
 
     this.salesSignal().forEach((sale) => {
-      sale.items.forEach((item) => {
+      (sale.items || []).forEach((item) => {
         const existing = productMap.get(item.productId);
         if (existing) {
           existing.quantity += item.quantity;
@@ -229,10 +229,12 @@ export class SalesService {
     return crypto.randomUUID();
   }
 
-  // Generar número de venta
+  // Generar número de venta (único globalmente para multi-usuario)
   private generateSaleNumber(): string {
-    const count = this.salesSignal().length + 1;
-    return `VENTA-${count.toString().padStart(4, '0')}`;
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+    const time = now.getTime().toString().slice(-6); // últimos 6 dígitos del timestamp
+    return `V-${date}-${time}`;
   }
 
   // 🔔 Sistema de notificaciones automáticas

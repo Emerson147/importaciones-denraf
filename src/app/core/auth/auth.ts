@@ -16,32 +16,11 @@ export class AuthService {
   private readonly USERS_KEY = 'users';
   private readonly CURRENT_USER_KEY = 'current_user';
 
-  // Usuarios disponibles (3 vendedores de la familia)
-  private usersList = signal<User[]>(
-    this.loadUsersFromStorage() || [
-      {
-        id: 'user-1',
-        name: 'Yo',
-        role: 'admin',
-        pin: '1234',
-        createdAt: new Date('2024-01-01'),
-      },
-      {
-        id: 'user-2',
-        name: 'Mamá',
-        role: 'vendor',
-        pin: '5678',
-        createdAt: new Date('2024-01-01'),
-      },
-      {
-        id: 'user-3',
-        name: 'Hermano',
-        role: 'vendor',
-        pin: '9012',
-        createdAt: new Date('2024-01-01'),
-      },
-    ]
-  );
+  // 🔄 Estado de carga de usuarios
+  isLoadingUsers = signal(true);
+
+  // Usuarios disponibles - ahora prioriza Supabase sobre localStorage
+  private usersList = signal<User[]>([]);
 
   // Estado del usuario actual
   private currentUserSig = signal<User | null>(this.loadUserFromStorage());
@@ -52,6 +31,7 @@ export class AuthService {
 
   /**
    * 🌐 Cargar usuarios desde Supabase al iniciar
+   * Prioridad: Supabase > localStorage > usuarios de prueba
    */
   private async initFromCloud(): Promise<void> {
     try {
@@ -59,6 +39,8 @@ export class AuthService {
 
       if (error) {
         console.error('Error cargando usuarios:', error);
+        // Fallback a localStorage
+        this.loadFromLocalStorageOrDefaults();
         return;
       }
 
@@ -74,9 +56,38 @@ export class AuthService {
         }));
         console.log(`☁️ Cargados ${users.length} usuarios desde Supabase`);
         this.usersList.set(users);
+        // Actualizar localStorage con datos de Supabase
+        this.saveUsersToStorage();
+      } else {
+        // Supabase vacío, usar localStorage o defaults
+        this.loadFromLocalStorageOrDefaults();
       }
     } catch (error) {
       console.log('📴 Sin conexión, usando usuarios locales');
+      this.loadFromLocalStorageOrDefaults();
+    } finally {
+      this.isLoadingUsers.set(false);
+    }
+  }
+
+  /**
+   * Cargar usuarios desde localStorage o usar defaults
+   */
+  private loadFromLocalStorageOrDefaults(): void {
+    const stored = this.loadUsersFromStorage();
+    if (stored && stored.length > 0) {
+      this.usersList.set(stored);
+    } else {
+      // Usuarios por defecto solo si no hay datos
+      this.usersList.set([
+        {
+          id: 'user-1',
+          name: 'Admin',
+          role: 'admin',
+          pin: '1234',
+          createdAt: new Date('2024-01-01'),
+        },
+      ]);
     }
   }
 
@@ -84,7 +95,10 @@ export class AuthService {
   isAuthenticated = computed(() => !!this.currentUserSig());
   currentUser = computed(() => this.currentUserSig());
 
-  // Obtener todos los usuarios disponibles
+  // 🔄 Signal reactivo para usuarios disponibles
+  availableUsers = computed(() => this.usersList());
+
+  // Obtener todos los usuarios disponibles (legacy - usar availableUsers signal)
   getAvailableUsers(): User[] {
     return this.usersList();
   }
