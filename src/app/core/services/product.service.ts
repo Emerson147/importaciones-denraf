@@ -29,6 +29,26 @@ export class ProductService {
       const products = this.productsSignal();
       this.saveToStorage(products);
     });
+
+    // 🔄 Cargar datos desde Supabase al iniciar (si hay conexión)
+    this.initFromCloud();
+  }
+
+  /**
+   * 🌐 Inicializar productos desde Supabase
+   * Permite que todos los usuarios vean los mismos datos
+   */
+  private async initFromCloud(): Promise<void> {
+    try {
+      const { products } = await this.syncService.pullFromCloud();
+
+      if (products.length > 0) {
+        console.log(`☁️ Cargados ${products.length} productos desde Supabase`);
+        this.productsSignal.set(products);
+      }
+    } catch (error) {
+      console.log('📴 Sin conexión, usando datos locales');
+    }
   }
 
   /**

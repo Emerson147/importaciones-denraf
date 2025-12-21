@@ -2,6 +2,8 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { User } from '../models';
 import { StorageService } from '../services/storage.service';
+import { SyncService } from '../services/sync.service';
+import { supabase } from '../services/supabase.service';
 
 @Injectable({
   providedIn: 'root',
@@ -9,37 +11,74 @@ import { StorageService } from '../services/storage.service';
 export class AuthService {
   private router = inject(Router);
   private storage = inject(StorageService);
-  
+  private syncService = inject(SyncService);
+
   private readonly USERS_KEY = 'users';
   private readonly CURRENT_USER_KEY = 'current_user';
 
   // Usuarios disponibles (3 vendedores de la familia)
-  private usersList = signal<User[]>(this.loadUsersFromStorage() || [
-    { 
-      id: 'user-1', 
-      name: 'Yo', 
-      role: 'admin',
-      pin: '1234',
-      createdAt: new Date('2024-01-01')
-    },
-    { 
-      id: 'user-2', 
-      name: 'Mamá', 
-      role: 'vendor',
-      pin: '5678',
-      createdAt: new Date('2024-01-01')
-    },
-    { 
-      id: 'user-3', 
-      name: 'Hermano', 
-      role: 'vendor',
-      pin: '9012',
-      createdAt: new Date('2024-01-01')
-    }
-  ]);
+  private usersList = signal<User[]>(
+    this.loadUsersFromStorage() || [
+      {
+        id: 'user-1',
+        name: 'Yo',
+        role: 'admin',
+        pin: '1234',
+        createdAt: new Date('2024-01-01'),
+      },
+      {
+        id: 'user-2',
+        name: 'Mamá',
+        role: 'vendor',
+        pin: '5678',
+        createdAt: new Date('2024-01-01'),
+      },
+      {
+        id: 'user-3',
+        name: 'Hermano',
+        role: 'vendor',
+        pin: '9012',
+        createdAt: new Date('2024-01-01'),
+      },
+    ]
+  );
 
   // Estado del usuario actual
   private currentUserSig = signal<User | null>(this.loadUserFromStorage());
+
+  constructor() {
+    this.initFromCloud();
+  }
+
+  /**
+   * 🌐 Cargar usuarios desde Supabase al iniciar
+   */
+  private async initFromCloud(): Promise<void> {
+    try {
+      const { data, error } = await supabase.from('usuarios').select('*');
+
+      if (error) {
+        console.error('Error cargando usuarios:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const users = data.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          pin: u.pin,
+          avatar: u.avatar,
+          createdAt: u.created_at ? new Date(u.created_at) : new Date(),
+        }));
+        console.log(`☁️ Cargados ${users.length} usuarios desde Supabase`);
+        this.usersList.set(users);
+      }
+    } catch (error) {
+      console.log('📴 Sin conexión, usando usuarios locales');
+    }
+  }
 
   // Computadas
   isAuthenticated = computed(() => !!this.currentUserSig());
@@ -58,35 +97,47 @@ export class AuthService {
   // Crear nuevo usuario
   createUser(data: { name: string; role: 'admin' | 'vendor'; pin: string }): User {
     const newUser: User = {
-      id: `user-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: data.name,
       role: data.role,
       pin: data.pin,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
-    
-    this.usersList.update(users => [...users, newUser]);
+
+    this.usersList.update((users) => [...users, newUser]);
     this.saveUsersToStorage();
+
+    // 🔄 Sincronizar con Supabase
+    this.syncService.queueForSync('user', 'create', newUser);
+
     return newUser;
   }
 
   // Actualizar usuario existente
-  updateUser(userId: string, data: { name: string; role: 'admin' | 'vendor'; pin: string }): boolean {
-    const userIndex = this.usersList().findIndex(u => u.id === userId);
+  updateUser(
+    userId: string,
+    data: { name: string; role: 'admin' | 'vendor'; pin: string }
+  ): boolean {
+    const userIndex = this.usersList().findIndex((u) => u.id === userId);
     if (userIndex === -1) return false;
 
-    this.usersList.update(users => {
+    this.usersList.update((users) => {
       const updated = [...users];
       updated[userIndex] = {
         ...updated[userIndex],
         name: data.name,
         role: data.role,
-        pin: data.pin
+        pin: data.pin,
       };
       return updated;
     });
 
     this.saveUsersToStorage();
+
+    // 🔄 Sincronizar con Supabase
+    const updatedUser = this.usersList()[userIndex];
+    this.syncService.queueForSync('user', 'update', updatedUser);
+
     return true;
   }
 
@@ -96,14 +147,18 @@ export class AuthService {
       return false; // No se puede eliminar el usuario actual
     }
 
-    this.usersList.update(users => users.filter(u => u.id !== userId));
+    this.usersList.update((users) => users.filter((u) => u.id !== userId));
     this.saveUsersToStorage();
+
+    // 🔄 Sincronizar eliminación con Supabase
+    this.syncService.queueForSync('user', 'delete', { id: userId });
+
     return true;
   }
 
   // Login - seleccionar usuario por ID y PIN
   login(userId: string, pin?: string): boolean {
-    const user = this.usersList().find(u => u.id === userId);
+    const user = this.usersList().find((u) => u.id === userId);
     if (!user) return false;
 
     // Validar PIN si se proporciona
@@ -118,7 +173,7 @@ export class AuthService {
 
   // Validar PIN de un usuario
   validatePin(userId: string, pin: string): boolean {
-    const user = this.usersList().find(u => u.id === userId);
+    const user = this.usersList().find((u) => u.id === userId);
     return user ? user.pin === pin : false;
   }
 

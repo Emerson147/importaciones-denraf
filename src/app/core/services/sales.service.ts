@@ -5,9 +5,11 @@ import { ToastService } from './toast.service';
 import { ProductService } from './product.service';
 import { ErrorHandlerService } from './error-handler.service';
 import { StorageService } from './storage.service';
+import { SyncService } from './sync.service';
+import { LocalDbService } from './local-db.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SalesService {
   private notificationService = inject(NotificationService);
@@ -15,22 +17,42 @@ export class SalesService {
   private productService = inject(ProductService);
   private errorHandler = inject(ErrorHandlerService);
   private storage = inject(StorageService);
-  
+  private syncService = inject(SyncService);
+  private localDb = inject(LocalDbService);
+
   private readonly STORAGE_KEY = 'sales';
-  
+
   // Estado de ventas
   private salesSignal = signal<Sale[]>([]);
-  
+
   // Exponemos como readonly
   readonly sales = this.salesSignal.asReadonly();
   readonly allSales = this.sales; // Alias para compatibilidad
 
+  constructor() {
+    this.loadFromLocalStorage();
+    this.initFromCloud();
+  }
+
+  /**
+   * 🌐 Cargar ventas desde Supabase al iniciar
+   */
+  private async initFromCloud(): Promise<void> {
+    try {
+      const { sales } = await this.syncService.pullFromCloud();
+      if (sales.length > 0) {
+        console.log(`☁️ Cargadas ${sales.length} ventas desde Supabase`);
+        this.salesSignal.set(sales);
+      }
+    } catch (error) {
+      console.log('📴 Sin conexión, usando ventas locales');
+    }
+  }
+
   // Ventas de hoy
   todaySales = computed(() => {
     const today = new Date().toDateString();
-    return this.salesSignal().filter(s => 
-      new Date(s.date).toDateString() === today
-    );
+    return this.salesSignal().filter((s) => new Date(s.date).toDateString() === today);
   });
 
   // Ingresos de hoy
@@ -42,7 +64,7 @@ export class SalesService {
   weeklySales = computed(() => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    return this.salesSignal().filter(s => new Date(s.date) >= weekAgo);
+    return this.salesSignal().filter((s) => new Date(s.date) >= weekAgo);
   });
 
   // Ingresos de la semana
@@ -53,10 +75,9 @@ export class SalesService {
   // Ventas del mes
   monthlySales = computed(() => {
     const now = new Date();
-    return this.salesSignal().filter(s => {
+    return this.salesSignal().filter((s) => {
       const saleDate = new Date(s.date);
-      return saleDate.getMonth() === now.getMonth() && 
-             saleDate.getFullYear() === now.getFullYear();
+      return saleDate.getMonth() === now.getMonth() && saleDate.getFullYear() === now.getFullYear();
     });
   });
 
@@ -68,9 +89,9 @@ export class SalesService {
   // Productos más vendidos
   topProducts = computed(() => {
     const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
-    
-    this.salesSignal().forEach(sale => {
-      sale.items.forEach(item => {
+
+    this.salesSignal().forEach((sale) => {
+      sale.items.forEach((item) => {
         const existing = productMap.get(item.productId);
         if (existing) {
           existing.quantity += item.quantity;
@@ -79,7 +100,7 @@ export class SalesService {
           productMap.set(item.productId, {
             name: item.productName,
             quantity: item.quantity,
-            revenue: item.subtotal
+            revenue: item.subtotal,
           });
         }
       });
@@ -107,12 +128,12 @@ export class SalesService {
           ...sale,
           id: this.generateId(),
           saleNumber: this.generateSaleNumber(),
-          date: new Date()
+          date: new Date(),
         };
 
         // ⚡ SINCRONIZACIÓN AUTOMÁTICA: Reducir stock de cada producto vendido
         const failedItems: string[] = [];
-        newSale.items.forEach(item => {
+        newSale.items.forEach((item) => {
           const success = this.productService.reduceStock(item.productId, item.quantity);
           if (!success) {
             failedItems.push(item.productName);
@@ -124,17 +145,23 @@ export class SalesService {
         }
 
         // Agregar venta al historial
-        this.salesSignal.update(current => [newSale, ...current]);
-        
+        this.salesSignal.update((current) => [newSale, ...current]);
+
         // Guardar en localStorage
         this.saveToLocalStorage();
-        
+
+        // 🔄 Sincronizar con Supabase
+        this.syncService.queueForSync('sale', 'create', newSale);
+        this.localDb.saveSale(newSale);
+
         // 🔔 Notificaciones automáticas
         this.checkAndNotify(newSale);
-        
+
         // Toast de confirmación
-        this.toastService.success(`✅ Venta ${newSale.saleNumber} registrada e inventario actualizado`);
-        
+        this.toastService.success(
+          `✅ Venta ${newSale.saleNumber} registrada e inventario actualizado`
+        );
+
         return newSale;
       },
       'Registro de venta',
@@ -144,20 +171,20 @@ export class SalesService {
 
   // Obtener venta por ID
   getSaleById(id: string): Sale | undefined {
-    return this.salesSignal().find(s => s.id === id);
+    return this.salesSignal().find((s) => s.id === id);
   }
 
   // Cancelar venta
   cancelSale(id: string): void {
-    this.salesSignal.update(current =>
-      current.map(s => s.id === id ? { ...s, status: 'cancelled' as const } : s)
+    this.salesSignal.update((current) =>
+      current.map((s) => (s.id === id ? { ...s, status: 'cancelled' as const } : s))
     );
     this.saveToLocalStorage();
   }
 
   // Filtrar ventas por rango de fechas
   getSalesByDateRange(startDate: Date, endDate: Date): Sale[] {
-    return this.salesSignal().filter(s => {
+    return this.salesSignal().filter((s) => {
       const saleDate = new Date(s.date);
       return saleDate >= startDate && saleDate <= endDate;
     });
@@ -165,7 +192,7 @@ export class SalesService {
 
   // Filtrar ventas por método de pago
   getSalesByPaymentMethod(method: Sale['paymentMethod']): Sale[] {
-    return this.salesSignal().filter(s => s.paymentMethod === method);
+    return this.salesSignal().filter((s) => s.paymentMethod === method);
   }
 
   // Cargar ventas desde localStorage
@@ -181,9 +208,9 @@ export class SalesService {
     this.storage.set(this.STORAGE_KEY, this.salesSignal());
   }
 
-  // Generar ID único
+  // Generar ID único (UUID para Supabase)
   private generateId(): string {
-    return `SALE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return crypto.randomUUID();
   }
 
   // Generar número de venta
@@ -203,7 +230,7 @@ export class SalesService {
           persistent: sale.total > 500, // Solo guardar ventas grandes
           title: sale.total > 500 ? '🎉 Venta Grande' : 'Venta Completada',
           actionLabel: 'Ver detalles',
-          actionRoute: '/pos'
+          actionRoute: '/pos',
         }
       );
 
@@ -214,24 +241,24 @@ export class SalesService {
           `¡Excelente! Venta de $${sale.total.toLocaleString()} completada`,
           {
             actionLabel: 'Ver dashboard',
-            actionRoute: '/dashboard'
+            actionRoute: '/dashboard',
           }
         );
       }
     }
 
     // 2. Verificar stock bajo en productos vendidos
-    sale.items.forEach(item => {
+    sale.items.forEach((item) => {
       // Simulamos stock bajo (en producción, verificarías con InventoryService)
       const estimatedStock = Math.floor(Math.random() * 15); // Mock
-      
+
       if (estimatedStock < 5 && estimatedStock > 0) {
         this.notificationService.warning(
           '⚠️ Stock Bajo',
           `${item.productName} tiene solo ${estimatedStock} unidades disponibles`,
           {
             actionLabel: 'Ver inventario',
-            actionRoute: '/inventory'
+            actionRoute: '/inventory',
           }
         );
       } else if (estimatedStock === 0) {
@@ -240,7 +267,7 @@ export class SalesService {
           `${item.productName} está agotado. Necesita restock urgente`,
           {
             actionLabel: 'Gestionar inventario',
-            actionRoute: '/inventory'
+            actionRoute: '/inventory',
           }
         );
       }
@@ -258,7 +285,7 @@ export class SalesService {
     const totalSales = today.length;
     const totalRevenue = this.todayRevenue();
     const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
-    
+
     const byPaymentMethod = today.reduce((acc, sale) => {
       acc[sale.paymentMethod] = (acc[sale.paymentMethod] || 0) + 1;
       return acc;
@@ -268,7 +295,7 @@ export class SalesService {
       totalSales,
       totalRevenue,
       averageTicket,
-      byPaymentMethod
+      byPaymentMethod,
     };
   }
 }
