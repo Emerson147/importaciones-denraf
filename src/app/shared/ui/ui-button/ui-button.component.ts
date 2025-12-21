@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { cn } from '../../utils/cn'; // Asegúrate que la ruta sea correcta
 
@@ -6,6 +6,7 @@ import { cn } from '../../utils/cn'; // Asegúrate que la ruta sea correcta
   selector: 'app-ui-button',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button [class]="classes" [disabled]="disabled" (click)="onClick.emit($event)">
       <ng-content></ng-content>

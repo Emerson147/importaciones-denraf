@@ -3,6 +3,8 @@ import { Sale, SaleItem, Customer } from '../models';
 import { NotificationService } from './notification.service';
 import { ToastService } from './toast.service';
 import { ProductService } from './product.service';
+import { ErrorHandlerService } from './error-handler.service';
+import { StorageService } from './storage.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +13,10 @@ export class SalesService {
   private notificationService = inject(NotificationService);
   private toastService = inject(ToastService);
   private productService = inject(ProductService);
+  private errorHandler = inject(ErrorHandlerService);
+  private storage = inject(StorageService);
+  
+  private readonly STORAGE_KEY = 'sales';
   
   // Estado de ventas
   private salesSignal = signal<Sale[]>([]);
@@ -85,41 +91,55 @@ export class SalesService {
   });
 
   // ✅ Crear nueva venta Y REDUCIR STOCK AUTOMÁTICAMENTE
-  createSale(sale: Omit<Sale, 'id' | 'saleNumber' | 'date'>): Sale {
-    const newSale: Sale = {
-      ...sale,
-      id: this.generateId(),
-      saleNumber: this.generateSaleNumber(),
-      date: new Date()
-    };
+  createSale(sale: Omit<Sale, 'id' | 'saleNumber' | 'date'>): Sale | null {
+    return this.errorHandler.handleSyncOperation(
+      () => {
+        // Validaciones
+        if (!sale.items || sale.items.length === 0) {
+          throw new Error('No se pueden crear ventas sin productos');
+        }
 
-    // ⚡ SINCRONIZACIÓN AUTOMÁTICA: Reducir stock de cada producto vendido
-    let stockUpdateSuccess = true;
-    newSale.items.forEach(item => {
-      const success = this.productService.reduceStock(item.productId, item.quantity);
-      if (!success) {
-        console.warn(`⚠️ No se pudo reducir stock del producto ${item.productId}`);
-        stockUpdateSuccess = false;
-      }
-    });
+        if (sale.total <= 0) {
+          throw new Error('El total de la venta debe ser mayor a 0');
+        }
 
-    // Agregar venta al historial
-    this.salesSignal.update(current => [newSale, ...current]);
-    
-    // Guardar en localStorage
-    this.saveToLocalStorage();
-    
-    // 🔔 Notificaciones automáticas
-    this.checkAndNotify(newSale);
-    
-    // Toast de confirmación
-    if (stockUpdateSuccess) {
-      this.toastService.success(`✅ Venta ${newSale.saleNumber} registrada e inventario actualizado`);
-    } else {
-      this.toastService.warning(`⚠️ Venta registrada pero revisa el inventario`);
-    }
-    
-    return newSale;
+        const newSale: Sale = {
+          ...sale,
+          id: this.generateId(),
+          saleNumber: this.generateSaleNumber(),
+          date: new Date()
+        };
+
+        // ⚡ SINCRONIZACIÓN AUTOMÁTICA: Reducir stock de cada producto vendido
+        const failedItems: string[] = [];
+        newSale.items.forEach(item => {
+          const success = this.productService.reduceStock(item.productId, item.quantity);
+          if (!success) {
+            failedItems.push(item.productName);
+          }
+        });
+
+        if (failedItems.length > 0) {
+          throw new Error(`No se pudo actualizar el stock de: ${failedItems.join(', ')}`);
+        }
+
+        // Agregar venta al historial
+        this.salesSignal.update(current => [newSale, ...current]);
+        
+        // Guardar en localStorage
+        this.saveToLocalStorage();
+        
+        // 🔔 Notificaciones automáticas
+        this.checkAndNotify(newSale);
+        
+        // Toast de confirmación
+        this.toastService.success(`✅ Venta ${newSale.saleNumber} registrada e inventario actualizado`);
+        
+        return newSale;
+      },
+      'Registro de venta',
+      'No se pudo completar la venta'
+    );
   }
 
   // Obtener venta por ID
@@ -150,20 +170,15 @@ export class SalesService {
 
   // Cargar ventas desde localStorage
   loadFromLocalStorage(): void {
-    const stored = localStorage.getItem('denraf_sales');
+    const stored = this.storage.get<Sale[]>(this.STORAGE_KEY);
     if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        this.salesSignal.set(parsed);
-      } catch (error) {
-        console.error('Error loading sales:', error);
-      }
+      this.salesSignal.set(stored);
     }
   }
 
   // Guardar en localStorage
   private saveToLocalStorage(): void {
-    localStorage.setItem('denraf_sales', JSON.stringify(this.salesSignal()));
+    this.storage.set(this.STORAGE_KEY, this.salesSignal());
   }
 
   // Generar ID único

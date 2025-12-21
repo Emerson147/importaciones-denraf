@@ -1,11 +1,13 @@
 import { Component, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
-import { UiInputComponent } from '../../shared/ui/ui-input/ui-input.component';
-import { UiButtonComponent } from '../../shared/ui/ui-button/ui-button.component';
-import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-header.component';
-import { UiKpiCardComponent } from '../../shared/ui/ui-kpi-card/ui-kpi-card.component';
-import { UiExportMenuComponent } from '../../shared/ui/ui-export-menu/ui-export-menu.component';
+import { 
+  UiInputComponent,
+  UiButtonComponent,
+  UiPageHeaderComponent,
+  UiKpiCardComponent,
+  UiExportMenuComponent
+} from '../../shared/ui';
 import { ToastService } from '../../core/services/toast.service';
 import { SalesService } from '../../core/services/sales.service';
 import { AnalyticsService } from '../../core/services/analytics.service';
@@ -208,7 +210,6 @@ export class DashboardPageComponent {
       image: this.newProductImage(),
     };
 
-    console.log('Guardando producto:', newProduct);
     this.products.update((prev) => [newProduct, ...prev]);
 
     this.toastService.success(`Producto "${newProduct.name}" agregado correctamente`);

@@ -16,7 +16,10 @@ import { CommonModule } from '@angular/common';
       ></div>
 
       <div
-        class="relative z-10 w-full max-w-md transform overflow-hidden rounded-4xl bg-[#FDFCFC] p-8 shadow-2xl transition-all duration-400 ease-spring"
+        class="relative z-10 w-full max-h-[90vh] flex flex-col transform rounded-4xl bg-[#FDFCFC] shadow-2xl transition-all duration-400 ease-spring"
+        [class.max-w-md]="maxWidth === 'sm'"
+        [class.max-w-2xl]="maxWidth === 'md'"
+        [class.max-w-4xl]="maxWidth === 'lg'"
         [style.transform-origin]="transformOrigin()"
         [class.scale-90]="!animateIn()"
         [class.opacity-0]="!animateIn()"
@@ -26,11 +29,13 @@ import { CommonModule } from '@angular/common';
         [class.translate-y-0]="animateIn()"
         (click)="$event.stopPropagation()"
       >
-        <ng-content></ng-content>
+        <div class="overflow-y-auto no-scrollbar flex-1 p-8 pb-4">
+          <ng-content></ng-content>
+        </div>
 
         <button
           (click)="close()"
-          class="absolute top-4 right-4 p-2 rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-800 transition-colors"
+          class="absolute top-6 right-6 p-2 rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-800 transition-colors z-10"
         >
           <span class="material-icons-outlined text-lg">close</span>
         </button>
@@ -49,6 +54,7 @@ import { CommonModule } from '@angular/common';
 })
 export class UiAnimatedDialogComponent {
   @Input() trigger: HTMLElement | null = null;
+  @Input() maxWidth: 'sm' | 'md' | 'lg' = 'lg';
   transformOrigin = signal('center center');
 
   @Input() set isOpen(value: boolean) {

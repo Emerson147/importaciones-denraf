@@ -5,6 +5,7 @@ import { UiEmptyStateComponent } from '../../../shared/ui/ui-empty-state/ui-empt
 import { UiExportMenuComponent } from '../../../shared/ui/ui-export-menu/ui-export-menu.component';
 import { SalesService } from '../../../core/services/sales.service';
 import { AuthService } from '../../../core/auth/auth';
+import { LoggerService } from '../../../core/services/logger.service';
 import { Sale } from '../../../core/models';
 
 @Component({
@@ -16,6 +17,7 @@ import { Sale } from '../../../core/models';
 export class SalesHistoryComponent {
   private salesService = inject(SalesService);
   private authService = inject(AuthService);
+  private logger = inject(LoggerService);
 
   // Filtros
   searchQuery = signal('');

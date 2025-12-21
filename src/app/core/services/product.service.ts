@@ -1,5 +1,7 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { Product } from '../models';
+import { ErrorHandlerService } from './error-handler.service';
+import { StorageService } from './storage.service';
 
 /**
  * Servicio centralizado de productos
@@ -10,8 +12,41 @@ import { Product } from '../models';
   providedIn: 'root'
 })
 export class ProductService {
+  private readonly STORAGE_KEY = 'products';
+  private errorHandler = inject(ErrorHandlerService);
+  private storage = inject(StorageService);
+  
   // ✅ FUENTE ÚNICA DE VERDAD - Todos los productos del sistema
-  private productsSignal = signal<Product[]>([
+  private productsSignal = signal<Product[]>(this.loadFromStorage());
+
+  constructor() {
+    // Auto-guardado en LocalStorage cuando cambian los productos
+    effect(() => {
+      const products = this.productsSignal();
+      this.saveToStorage(products);
+    });
+  }
+
+  /**
+   * Cargar productos desde LocalStorage o usar datos iniciales
+   */
+  private loadFromStorage(): Product[] {
+    const stored = this.storage.get<Product[]>(this.STORAGE_KEY);
+    return stored || this.getInitialProducts();
+  }
+
+  /**
+   * Guardar productos en LocalStorage
+   */
+  private saveToStorage(products: Product[]): void {
+    this.storage.set(this.STORAGE_KEY, products);
+  }
+
+  /**
+   * Productos iniciales del sistema
+   */
+  private getInitialProducts(): Product[] {
+    return [
     {
       id: 'PROD-001',
       name: 'Casaca Impermeable Negra',
@@ -148,7 +183,8 @@ export class ProductService {
       createdAt: new Date('2024-11-25'),
       updatedAt: new Date()
     }
-  ]);
+  ];
+  }
 
   // ✅ API pública para acceder a productos
   products = this.productsSignal.asReadonly();
@@ -191,32 +227,37 @@ export class ProductService {
    * ⚠️ CRÍTICO: Este método se llama desde SalesService al registrar ventas
    */
   updateStock(productId: string, quantityChange: number): boolean {
-    const products = this.productsSignal();
-    const index = products.findIndex(p => p.id === productId);
-    
-    if (index === -1) return false;
+    return this.errorHandler.handleSyncOperation(
+      () => {
+        const products = this.productsSignal();
+        const index = products.findIndex(p => p.id === productId);
+        
+        if (index === -1) {
+          throw new Error(`Producto no encontrado: ${productId}`);
+        }
 
-    const product = products[index];
-    const newStock = product.stock + quantityChange;
+        const product = products[index];
+        const newStock = product.stock + quantityChange;
 
-    // No permitir stock negativo
-    if (newStock < 0) {
-      console.warn(`No se puede reducir stock de ${product.name} por debajo de 0`);
-      return false;
-    }
+        // No permitir stock negativo
+        if (newStock < 0) {
+          throw new Error(`Stock insuficiente para ${product.name}. Stock actual: ${product.stock}, requerido: ${Math.abs(quantityChange)}`);
+        }
 
-    // Actualizar el array inmutablemente
-    const updatedProducts = [...products];
-    updatedProducts[index] = {
-      ...product,
-      stock: newStock,
-      updatedAt: new Date()
-    };
+        // Actualizar el array inmutablemente
+        const updatedProducts = [...products];
+        updatedProducts[index] = {
+          ...product,
+          stock: newStock,
+          updatedAt: new Date()
+        };
 
-    this.productsSignal.set(updatedProducts);
-    console.log(`✅ Stock actualizado: ${product.name} | Cambio: ${quantityChange} | Nuevo stock: ${newStock}`);
-    
-    return true;
+        this.productsSignal.set(updatedProducts);
+        return true;
+      },
+      'Actualización de stock',
+      'No se pudo actualizar el stock del producto'
+    ) || false;
   }
 
   /**
@@ -237,49 +278,77 @@ export class ProductService {
   /**
    * Agregar un nuevo producto
    */
-  addProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Product {
-    const newProduct: Product = {
-      ...product,
-      id: `PROD-${Date.now()}`,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+  addProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Product | null {
+    return this.errorHandler.handleSyncOperation(
+      () => {
+        // Validación de campos requeridos
+        if (!product.name || !product.category || product.price <= 0) {
+          throw new Error('Datos del producto inválidos');
+        }
 
-    this.productsSignal.update(products => [...products, newProduct]);
-    return newProduct;
+        const newProduct: Product = {
+          ...product,
+          id: `PROD-${Date.now()}`,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        this.productsSignal.update(products => [...products, newProduct]);
+        return newProduct;
+      },
+      'Creación de producto',
+      'No se pudo crear el producto'
+    );
   }
 
   /**
    * Actualizar un producto existente
    */
   updateProduct(id: string, updates: Partial<Product>): boolean {
-    const products = this.productsSignal();
-    const index = products.findIndex(p => p.id === id);
-    
-    if (index === -1) return false;
+    return this.errorHandler.handleSyncOperation(
+      () => {
+        const products = this.productsSignal();
+        const index = products.findIndex(p => p.id === id);
+        
+        if (index === -1) {
+          throw new Error(`Producto ${id} no encontrado`);
+        }
 
-    const updatedProducts = [...products];
-    updatedProducts[index] = {
-      ...updatedProducts[index],
-      ...updates,
-      updatedAt: new Date()
-    };
+        const updatedProducts = [...products];
+        updatedProducts[index] = {
+          ...updatedProducts[index],
+          ...updates,
+          id, // Asegurar que el ID no cambie
+          updatedAt: new Date()
+        };
 
-    this.productsSignal.set(updatedProducts);
-    return true;
+        this.productsSignal.set(updatedProducts);
+        return true;
+      },
+      'Actualización de producto',
+      'No se pudo actualizar el producto'
+    ) || false;
   }
 
   /**
    * Eliminar un producto
    */
   deleteProduct(id: string): boolean {
-    const products = this.productsSignal();
-    const filtered = products.filter(p => p.id !== id);
-    
-    if (filtered.length === products.length) return false;
-    
-    this.productsSignal.set(filtered);
-    return true;
+    return this.errorHandler.handleSyncOperation(
+      () => {
+        const products = this.productsSignal();
+        const filtered = products.filter(p => p.id !== id);
+        
+        if (filtered.length === products.length) {
+          throw new Error(`Producto ${id} no encontrado`);
+        }
+        
+        this.productsSignal.set(filtered);
+        return true;
+      },
+      'Eliminación de producto',
+      'No se pudo eliminar el producto'
+    ) || false;
   }
 
   /**

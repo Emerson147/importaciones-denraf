@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { LoggerService } from './logger.service';
 
 export interface ExportOptions {
   filename?: string;
@@ -14,6 +15,7 @@ export interface ExportOptions {
   providedIn: 'root'
 })
 export class ExportService {
+  private logger = inject(LoggerService);
 
   /**
    * Exporta datos a Excel (.xlsx)

@@ -1,9 +1,12 @@
-import { Injectable, signal, effect } from '@angular/core';
+import { Injectable, signal, effect, inject } from '@angular/core';
+import { StorageService } from '../services/storage.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ThemeService {
+  private storage = inject(StorageService);
+  
   // Estado reactivo (Lee de localStorage o detecta preferencia del sistema)
   darkMode = signal<boolean>(this.getInitialTheme());
 
@@ -18,7 +21,7 @@ export class ThemeService {
   }
 
   private getInitialTheme(): boolean {
-    const stored = localStorage.getItem('denraf_theme');
+    const stored = this.storage.get<string>('theme');
     if (stored) {
       return stored === 'dark';
     }
@@ -34,11 +37,11 @@ export class ThemeService {
       if (isDark) {
         root.classList.add('dark');
         document.body.classList.add('dark');
-        localStorage.setItem('denraf_theme', 'dark');
+        this.storage.set('theme', 'dark');
       } else {
         root.classList.remove('dark');
         document.body.classList.remove('dark');
-        localStorage.setItem('denraf_theme', 'light');
+        this.storage.set('theme', 'light');
       }
     };
 

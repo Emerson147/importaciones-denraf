@@ -1,10 +1,11 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-ui-empty-state',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-col items-center justify-center py-12 sm:py-16 px-4 text-center">
       <div class="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-stone-100 flex items-center justify-center mb-4">

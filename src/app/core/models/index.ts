@@ -2,6 +2,14 @@
 // MODELOS PRINCIPALES DE DENRAF
 // ============================================
 
+export interface ProductVariant {
+  id: string;
+  size: string;
+  color: string;
+  stock: number;
+  barcode?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -9,10 +17,11 @@ export interface Product {
   brand?: string;
   price: number;
   cost: number;
-  stock: number;
+  stock: number; // Stock total (suma de todas las variantes)
   minStock: number;
-  sizes: string[];
-  colors?: string[];
+  sizes: string[]; // Tallas disponibles
+  colors?: string[]; // Colores disponibles
+  variants?: ProductVariant[]; // Variantes (combinaciones talla+color)
   image: string | null;
   barcode?: string;
   status?: 'active' | 'archived';

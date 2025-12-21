@@ -1,15 +1,17 @@
 import { Injectable, signal, inject } from '@angular/core';
+import { Sale } from '../models';
+import { LoggerService } from './logger.service';
 
 interface SaleRecord {
   id: string;
-  data: any;
+  data: Omit<Sale, 'id' | 'saleNumber' | 'date'>;
   timestamp: number;
   synced: boolean;
 }
 
 interface InventoryRecord {
   id: string;
-  data: any;
+  data: { productId: string; quantity: number; operation: 'add' | 'subtract' };
   timestamp: number;
   synced: boolean;
 }
@@ -18,7 +20,7 @@ interface SyncQueueItem {
   id: string;
   operation: 'create' | 'update' | 'delete';
   entity: 'sales' | 'inventory' | 'clients';
-  data: any;
+  data: Sale | InventoryRecord['data'];
   timestamp: number;
   retries: number;
 }
@@ -96,7 +98,7 @@ export class OfflineService {
   }
 
   // Guardar venta offline
-  async saveSaleOffline(sale: any): Promise<void> {
+  async saveSaleOffline(sale: Omit<Sale, 'id' | 'saleNumber' | 'date'>): Promise<void> {
     if (!this.db) return;
 
     const id = crypto.randomUUID();
@@ -166,11 +168,13 @@ export class OfflineService {
         
         // Marcar como sincronizado en sales
         if (item.entity === 'sales') {
-          const sale = await this.getFromStore<SaleRecord>('sales', item.data.id);
+          const saleData = item.data as Omit<Sale, 'id' | 'saleNumber' | 'date'>;
+          const saleId = `SALE-${Date.now()}`;
+          const sale = await this.getFromStore<SaleRecord>('sales', saleId);
           if (sale) {
             const updatedSale: SaleRecord = { ...sale, synced: true };
             await this.putInStore('sales', updatedSale);
-            console.log(`✅ Venta marcada como sincronizada: ${item.data.id}`);
+            console.log(`✅ Venta marcada como sincronizada: ${saleId}`);
             
             // 🎯 AGREGAR AL SISTEMA DE VENTAS REAL
             this.addToSalesSystem(sale.data);
@@ -201,7 +205,7 @@ export class OfflineService {
   }
   
   // Agregar venta offline al sistema de ventas principal
-  private addToSalesSystem(saleData: any): void {
+  private addToSalesSystem(saleData: Omit<Sale, 'id' | 'saleNumber' | 'date'>): void {
     try {
       // Cargar ventas actuales de localStorage
       const stored = localStorage.getItem('denraf_sales');
@@ -300,7 +304,7 @@ export class OfflineService {
     });
   }
 
-  private putInStore(storeName: string, value: any): Promise<void> {
+  private putInStore<T>(storeName: string, value: T): Promise<void> {
     if (!this.db) return Promise.resolve();
 
     return new Promise((resolve, reject) => {

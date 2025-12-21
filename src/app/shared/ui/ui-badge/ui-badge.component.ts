@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { cn } from '../../utils/cn';
 
@@ -6,6 +6,7 @@ import { cn } from '../../utils/cn';
   selector: 'app-ui-badge',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div [class]="computedClass">
       <ng-content></ng-content>

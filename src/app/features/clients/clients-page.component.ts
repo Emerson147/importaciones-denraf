@@ -104,7 +104,6 @@ export class ClientsPageComponent {
   
   saveClient(name: string, phone: string) {
     // Lógica de guardado (similar a las anteriores)
-    console.log('Guardando cliente:', name);
     this.isDialogOpen.set(false);
   }
 }

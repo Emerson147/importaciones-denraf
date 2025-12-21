@@ -7,6 +7,7 @@ import { UiToastComponent } from '../shared/ui/ui-toast/ui-toast.component';
 import { UiNotificationCenterComponent } from '../shared/ui/ui-notification-center/ui-notification-center.component';
 import { ConnectionStatusComponent } from '../shared/ui/connection-status/connection-status.component';
 import { PwaInstallPromptComponent } from '../shared/ui/pwa-install-prompt/pwa-install-prompt.component';
+import { UiErrorLoggerComponent } from '../shared/ui/ui-error-logger/ui-error-logger.component';
 import { ClickOutsideDirective } from '../shared/directives/click-outside/click-outside.component';
 
 @Component({
@@ -21,6 +22,7 @@ import { ClickOutsideDirective } from '../shared/directives/click-outside/click-
     UiNotificationCenterComponent,
     ConnectionStatusComponent,
     PwaInstallPromptComponent,
+    UiErrorLoggerComponent,
     ClickOutsideDirective
   ],
   templateUrl: './main-layout.component.html',

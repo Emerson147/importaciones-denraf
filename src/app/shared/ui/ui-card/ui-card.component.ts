@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { cn } from '../../utils/cn'; // Tu utilidad maestra
 
@@ -6,6 +6,7 @@ import { cn } from '../../utils/cn'; // Tu utilidad maestra
   selector: 'app-ui-card',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div [class]="computedClass">
       @if (title) {

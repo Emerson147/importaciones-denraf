@@ -4,6 +4,7 @@ import { SalesService } from './sales.service';
 import { NotificationService } from './notification.service';
 import { ToastService } from './toast.service';
 import { AuthService } from '../auth/auth';
+import { LoggerService } from './logger.service';
 
 @Injectable({
   providedIn: 'root'
@@ -13,6 +14,7 @@ export class GamificationService {
   private notificationService = inject(NotificationService);
   private toastService = inject(ToastService);
   private authService = inject(AuthService);
+  private logger = inject(LoggerService);
 
   // Estado reactivo
   private achievements = signal<Achievement[]>([]);

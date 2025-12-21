@@ -145,7 +145,7 @@ export class ReportsPageComponent {
   });
 
   downloadReport() {
-    console.log('Descargando PDF...'); // Aquí iría tu lógica de exportar
+    // Aquí iría tu lógica de exportar
     alert('Funcionalidad de exportación próximamente');
   }
 }

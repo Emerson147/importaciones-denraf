@@ -1,15 +1,20 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { User } from '../models';
+import { StorageService } from '../services/storage.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   private router = inject(Router);
+  private storage = inject(StorageService);
+  
+  private readonly USERS_KEY = 'users';
+  private readonly CURRENT_USER_KEY = 'current_user';
 
   // Usuarios disponibles (3 vendedores de la familia)
-  private usersList = signal<User[]>([
+  private usersList = signal<User[]>(this.loadUsersFromStorage() || [
     { 
       id: 'user-1', 
       name: 'Yo', 
@@ -125,46 +130,24 @@ export class AuthService {
   // Logout
   logout() {
     this.currentUserSig.set(null);
-    localStorage.removeItem('denraf_current_user');
+    this.storage.remove(this.CURRENT_USER_KEY);
     this.router.navigate(['/login']);
   }
 
   // Persistencia
   private saveUserToStorage(user: User) {
-    localStorage.setItem('denraf_current_user', JSON.stringify(user));
+    this.storage.set(this.CURRENT_USER_KEY, user);
   }
 
   private loadUserFromStorage(): User | null {
-    const stored = localStorage.getItem('denraf_current_user');
-    if (!stored) return null;
-
-    try {
-      const parsed = JSON.parse(stored);
-      return {
-        ...parsed,
-        createdAt: new Date(parsed.createdAt)
-      };
-    } catch {
-      return null;
-    }
+    return this.storage.get<User>(this.CURRENT_USER_KEY);
   }
 
   private saveUsersToStorage() {
-    localStorage.setItem('denraf_users', JSON.stringify(this.usersList()));
+    this.storage.set(this.USERS_KEY, this.usersList());
   }
 
-  private loadUsersFromStorage(): User[] {
-    const stored = localStorage.getItem('denraf_users');
-    if (!stored) return [];
-
-    try {
-      const parsed = JSON.parse(stored);
-      return parsed.map((u: any) => ({
-        ...u,
-        createdAt: new Date(u.createdAt)
-      }));
-    } catch {
-      return [];
-    }
+  private loadUsersFromStorage(): User[] | null {
+    return this.storage.get<User[]>(this.USERS_KEY);
   }
 }

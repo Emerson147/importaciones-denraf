@@ -1,4 +1,5 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { LoggerService } from './logger.service';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -18,6 +19,8 @@ export interface Notification {
   providedIn: 'root'
 })
 export class NotificationService {
+  private logger = inject(LoggerService);
+  private readonly STORAGE_KEY = 'denraf-notifications';
   private notifications = signal<Notification[]>([]);
   
   // Computed signals
@@ -138,17 +141,17 @@ export class NotificationService {
         ...n,
         timestamp: n.timestamp.toISOString()
       }));
-      localStorage.setItem('denraf-notifications', JSON.stringify(data));
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
-      console.error('Error saving notifications:', error);
+      this.logger.error('Error saving notifications:', error);
     }
   }
 
   private loadFromLocalStorage() {
     try {
-      const saved = localStorage.getItem('denraf-notifications');
-      if (saved) {
-        const data = JSON.parse(saved);
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
         const notifications = data.map((n: any) => ({
           ...n,
           timestamp: new Date(n.timestamp)
@@ -156,7 +159,8 @@ export class NotificationService {
         this.notifications.set(notifications);
       }
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      this.logger.error('Error loading notifications:', error);
+      this.notifications.set([]);
     }
   }
 
