@@ -150,9 +150,25 @@ export class SalesService {
         // Guardar en localStorage
         this.saveToLocalStorage();
 
-        // 🔄 Sincronizar con Supabase
+        // 🔄 Sincronizar venta con Supabase
         this.syncService.queueForSync('sale', 'create', newSale);
         this.localDb.saveSale(newSale);
+
+        // 🔄 Sincronizar cada item de la venta (tabla venta_items)
+        newSale.items.forEach((item, index) => {
+          const saleItem = {
+            id: crypto.randomUUID(),
+            saleId: newSale.id,
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            size: item.size,
+            color: item.color,
+            unitPrice: item.unitPrice,
+            subtotal: item.subtotal,
+          };
+          this.syncService.queueForSync('sale_item', 'create', saleItem);
+        });
 
         // 🔔 Notificaciones automáticas
         this.checkAndNotify(newSale);

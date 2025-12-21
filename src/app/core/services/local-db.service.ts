@@ -28,7 +28,7 @@ interface DenrafDB extends DBSchema {
 
 export interface SyncQueueItem {
   id: string;
-  type: 'product' | 'sale' | 'user';
+  type: 'product' | 'sale' | 'sale_item' | 'user';
   action: 'create' | 'update' | 'delete';
   data: any;
   createdAt: Date;

@@ -203,6 +203,24 @@ export class SyncService {
       };
     }
 
+    if (type === 'sale_item') {
+      // Validar que productId sea UUID válido
+      const isValidUUID = (id: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+      return {
+        id: data.id,
+        sale_id: data.saleId,
+        product_id: data.productId && isValidUUID(data.productId) ? data.productId : null,
+        product_name: data.productName,
+        quantity: data.quantity,
+        size: data.size,
+        color: data.color,
+        unit_price: data.unitPrice,
+        subtotal: data.subtotal,
+      };
+    }
+
     // Si no hay adaptador, devolver datos originales
     return data;
   }
@@ -214,6 +232,7 @@ export class SyncService {
     const tables: Record<string, string> = {
       product: 'productos',
       sale: 'ventas',
+      sale_item: 'venta_items',
       user: 'usuarios',
     };
     return tables[type] || type;
