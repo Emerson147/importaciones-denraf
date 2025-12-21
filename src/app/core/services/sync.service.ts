@@ -107,10 +107,13 @@ export class SyncService {
     try {
       const table = this.getTableName(item.type);
 
+      // 🔄 Adaptar datos de Angular a Supabase
+      const adaptedData = this.adaptToSupabase(item.type, item.data);
+
       switch (item.action) {
         case 'create':
         case 'update':
-          const { error: upsertError } = await supabase.from(table).upsert(item.data);
+          const { error: upsertError } = await supabase.from(table).upsert(adaptedData);
           if (upsertError) throw upsertError;
           break;
 
@@ -122,9 +125,10 @@ export class SyncService {
 
       // Éxito: eliminar de la cola
       await this.localDb.removeSyncItem(item.id);
+      console.log(`✅ Sincronizado ${item.type}: ${item.action}`);
       return true;
     } catch (error) {
-      console.error(`Error sincronizando ${item.type}:`, error);
+      console.error(`❌ Error sincronizando ${item.type}:`, error);
 
       // Incrementar reintentos
       item.retries++;
@@ -138,6 +142,52 @@ export class SyncService {
 
       return false;
     }
+  }
+
+  /**
+   * 🔄 Adaptar datos de Angular a formato Supabase
+   * Angular usa camelCase, Supabase usa snake_case
+   */
+  private adaptToSupabase(type: string, data: any): any {
+    if (type === 'product') {
+      return {
+        id: data.id,
+        name: data.name,
+        category: data.category,
+        brand: data.brand,
+        price: data.price,
+        cost: data.cost,
+        stock: data.stock,
+        min_stock: data.minStock,
+        sizes: data.sizes,
+        colors: data.colors,
+        image: data.image,
+        barcode: data.barcode,
+        status: data.status || 'active',
+        created_at: data.createdAt,
+        updated_at: data.updatedAt,
+      };
+    }
+
+    if (type === 'sale') {
+      return {
+        id: data.id,
+        sale_number: data.saleNumber,
+        subtotal: data.subtotal,
+        discount: data.discount,
+        tax: data.tax,
+        total: data.total,
+        payment_method: data.paymentMethod,
+        status: data.status,
+        notes: data.notes,
+        created_by: data.createdBy,
+        vendedor_id: data.vendedorId,
+        created_at: data.date,
+      };
+    }
+
+    // Si no hay adaptador, devolver datos originales
+    return data;
   }
 
   /**
