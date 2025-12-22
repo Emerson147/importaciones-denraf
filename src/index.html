@@ -12,14 +12,32 @@
   <meta name="apple-mobile-web-app-title" content="DenRaf">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&amp;display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Playfair+Display:ital,wght@0,600;1,400&amp;display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+  
+  <!-- 🚀 OPTIMIZACIÓN: Preload fonts críticas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- 🚀 Fonts con display=swap para evitar FOIT (Flash of Invisible Text) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  
+  <!-- ⚡ LAZY LOAD: Material Icons solo cuando sea necesario -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined&display=swap" rel="stylesheet"></noscript>
+  
   <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <!-- 🚀 OPTIMIZACIÓN: Loader mientras carga la app -->
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f5f5f4;">
+      <div style="text-align:center;">
+        <div style="width:48px;height:48px;border:4px solid #e7e5e4;border-top-color:#1c1917;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+        <p style="color:#78716c;font-family:system-ui,-apple-system,sans-serif;font-size:14px;">Cargando DenRaf...</p>
+      </div>
+    </div>
+  </app-root>
   <noscript>Please enable JavaScript to continue using this application.</noscript>
 </body>
 </html>
