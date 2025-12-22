@@ -1,12 +1,13 @@
 import { Component, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
-import {
+import { 
   UiInputComponent,
   UiButtonComponent,
   UiPageHeaderComponent,
   UiKpiCardComponent,
   UiExportMenuComponent,
+  UiSkeletonComponent
 } from '../../shared/ui';
 import { ToastService } from '../../core/services/toast.service';
 import { SalesService } from '../../core/services/sales.service';
@@ -37,6 +38,7 @@ interface Product {
     UiPageHeaderComponent,
     UiKpiCardComponent,
     UiExportMenuComponent,
+    UiSkeletonComponent,
   ],
   templateUrl: './dashboard-page.component.html',
 })
@@ -45,6 +47,9 @@ export class DashboardPageComponent {
   private salesService = inject(SalesService);
   private analyticsService = inject(AnalyticsService);
   private apexConfigService = inject(ApexChartConfigService);
+
+  // 🔄 Estado de carga
+  isLoading = computed(() => this.salesService.isLoading());
 
   // Métricas de analytics
   profitMargin = this.analyticsService.profitMargin;
@@ -63,15 +68,15 @@ export class DashboardPageComponent {
       series: [
         {
           name: 'Esta semana',
-          data: comparison.current.dailyData,
+          data: comparison.current.dailyData
         },
         {
           name: 'Semana anterior',
-          data: comparison.previous.dailyData,
-        },
+          data: comparison.previous.dailyData
+        }
       ],
       categories: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-      height: 240,
+      height: 240
     });
   });
 
@@ -105,7 +110,7 @@ export class DashboardPageComponent {
   products = signal<Product[]>([]);
 
   // --- DATOS DEL DASHBOARD DESDE SALESSERVICE ---
-
+  
   // KPIs principales
   todaySales = this.salesService.todaySales;
   todayRevenue = this.salesService.todayRevenue;
@@ -126,7 +131,7 @@ export class DashboardPageComponent {
       const dayStart = new Date(date.setHours(0, 0, 0, 0));
       const dayEnd = new Date(date.setHours(23, 59, 59, 999));
 
-      const daySales = this.salesService.allSales().filter((sale) => {
+      const daySales = this.salesService.allSales().filter(sale => {
         const saleDate = new Date(sale.date);
         return saleDate >= dayStart && saleDate <= dayEnd;
       });
@@ -140,7 +145,7 @@ export class DashboardPageComponent {
 
   // Ventas pendientes
   pendingSales = computed(() => {
-    return this.salesService.allSales().filter((s) => s.status === 'pending').length;
+    return this.salesService.allSales().filter(s => s.status === 'pending').length;
   });
 
   // Top productos desde ventas reales
@@ -150,25 +155,20 @@ export class DashboardPageComponent {
   lowStockProducts = signal([
     { name: 'Casaca Bomber', stock: 2, category: 'Casacas' },
     { name: 'Jean Slim Fit', stock: 3, category: 'Pantalones' },
-    { name: 'Gorra Urbana', stock: 1, category: 'Accesorios' },
+    { name: 'Gorra Urbana', stock: 1, category: 'Accesorios' }
   ]);
 
   // Datos formateados para exportación
   exportData = computed(() => {
-    return this.todaySales().map((sale) => ({
+    return this.todaySales().map(sale => ({
       'Nº Venta': sale.saleNumber,
-      Fecha: new Date(sale.date).toLocaleDateString('es-PE'),
-      Cliente: sale.customer?.name || 'Cliente General',
-      Items: sale.items?.length ?? 0,
-      Subtotal: sale.subtotal,
-      Descuento: sale.discount,
-      Total: sale.total,
-      Estado:
-        sale.status === 'completed'
-          ? 'Completada'
-          : sale.status === 'pending'
-          ? 'Pendiente'
-          : 'Cancelada',
+      'Fecha': new Date(sale.date).toLocaleDateString('es-PE'),
+      'Cliente': sale.customer?.name || 'Cliente General',
+      'Items': sale.items?.length || 0,
+      'Subtotal': sale.subtotal,
+      'Descuento': sale.discount,
+      'Total': sale.total,
+      'Estado': sale.status === 'completed' ? 'Completada' : sale.status === 'pending' ? 'Pendiente' : 'Cancelada'
     }));
   });
 

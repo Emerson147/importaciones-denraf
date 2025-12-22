@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-6 md:p-8 transition-colors duration-300">
+<div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-6 md:p-8 transition-colors duration-100">
   <div class="max-w-[1600px] mx-auto space-y-6">
     
     <!-- Header -->
@@ -22,7 +22,7 @@
     </div>
 
     <!-- Grid de Productos -->
-    <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden transition-colors duration-300">
+    <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden transition-colors duration-100">
       
       <!-- Barra de búsqueda -->
       <div class="p-6 border-b border-stone-50 dark:border-stone-800 flex items-center justify-between">
@@ -45,11 +45,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           
           @for (product of filteredProducts(); track product.id) {
-            <div class="group bg-stone-50 rounded-2xl border border-stone-100 overflow-hidden hover:shadow-lg hover:border-stone-300 transition-all">
+            <div class="group bg-stone-50 rounded-2xl border border-stone-100 overflow-hidden hover:border-stone-300 transition-colors duration-100">
               
               <!-- Imagen del producto -->
               <div class="relative h-48 bg-stone-200 overflow-hidden">
-                <img [src]="product.image" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="">
+                <img [src]="product.image" class="w-full h-full object-cover" alt="">
                 
                 <!-- Badge de stock bajo -->
                 @if (product.stock <= product.minStock) {
@@ -198,7 +198,7 @@
             </span>
           </div>
         } @else {
-          <div class="text-center group-hover:scale-105 transition-transform duration-300">
+          <div class="text-center group-hover:scale-105 transition-transform duration-100">
             <div class="mx-auto h-12 w-12 rounded-full bg-white shadow-sm flex items-center justify-center mb-3">
               <span class="material-icons-outlined text-stone-400 text-2xl">add_a_photo</span>
             </div>

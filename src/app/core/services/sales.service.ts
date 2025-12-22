@@ -4,10 +4,13 @@ import { NotificationService } from './notification.service';
 import { ToastService } from './toast.service';
 import { ProductService } from './product.service';
 import { ErrorHandlerService } from './error-handler.service';
-import { StorageService } from './storage.service';
 import { SyncService } from './sync.service';
 import { LocalDbService } from './local-db.service';
 
+/**
+ * 🚀 SalesService - Supabase First Architecture
+ * Misma estrategia que ProductService: Supabase como verdad + IndexedDB como cache
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -16,36 +19,99 @@ export class SalesService {
   private toastService = inject(ToastService);
   private productService = inject(ProductService);
   private errorHandler = inject(ErrorHandlerService);
-  private storage = inject(StorageService);
   private syncService = inject(SyncService);
   private localDb = inject(LocalDbService);
 
-  private readonly STORAGE_KEY = 'sales';
-
   // Estado de ventas
   private salesSignal = signal<Sale[]>([]);
+
+  // 🔄 Estado de carga y sincronización
+  isLoading = signal(true);
+  isSyncing = signal(false);
+  lastSyncTime = signal<Date | null>(null);
 
   // Exponemos como readonly
   readonly sales = this.salesSignal.asReadonly();
   readonly allSales = this.sales; // Alias para compatibilidad
 
   constructor() {
-    this.loadFromLocalStorage();
-    this.initFromCloud();
+    this.initSupabaseFirst();
   }
 
   /**
-   * 🌐 Cargar ventas desde Supabase al iniciar
+   * 🚀 Estrategia Supabase-First con Cache Inteligente
    */
-  private async initFromCloud(): Promise<void> {
+  private async initSupabaseFirst(): Promise<void> {
+    console.log('🚀 [Sales] Iniciando carga Supabase-First...');
+
+    // PASO 1: Mostrar cache INMEDIATAMENTE
+    this.showCacheIfAvailable();
+
+    // PASO 2: Cargar desde Supabase
+    await this.loadFromSupabase();
+  }
+
+  /**
+   * Mostrar cache de IndexedDB inmediatamente
+   */
+  private async showCacheIfAvailable(): Promise<void> {
     try {
-      const { sales } = await this.syncService.pullFromCloud();
-      if (sales.length > 0) {
-        console.log(`☁️ Cargadas ${sales.length} ventas desde Supabase`);
-        this.salesSignal.set(sales);
+      const cachedSales = await this.localDb.getSales();
+      
+      if (cachedSales && cachedSales.length > 0) {
+        console.log(`⚡ Cache: ${cachedSales.length} ventas desde IndexedDB`);
+        this.salesSignal.set(cachedSales);
+        this.isLoading.set(false);
+      } else {
+        console.log('📄 No hay cache de ventas, esperando Supabase...');
       }
     } catch (error) {
-      console.log('📴 Sin conexión, usando ventas locales');
+      console.warn('⚠️ Error leyendo cache de ventas:', error);
+    }
+  }
+
+  /**
+   * Cargar ventas desde Supabase (fuente de verdad)
+   */
+  private async loadFromSupabase(): Promise<void> {
+    if (!navigator.onLine) {
+      console.log('📴 Sin conexión, usando solo cache');
+      this.isLoading.set(false);
+      return;
+    }
+
+    try {
+      this.isSyncing.set(true);
+      console.log('☁️ Cargando ventas desde Supabase...');
+
+      const { sales } = await this.syncService.pullFromCloud();
+
+      if (sales && sales.length > 0) {
+        console.log(`✅ Supabase: ${sales.length} ventas cargadas`);
+        this.salesSignal.set(sales);
+        await this.localDb.saveSales(sales);
+        this.lastSyncTime.set(new Date());
+      }
+    } catch (error) {
+      console.error('❌ Error cargando ventas desde Supabase:', error);
+    } finally {
+      this.isLoading.set(false);
+      this.isSyncing.set(false);
+    }
+  }
+
+  /**
+   * Sincronizar cambios locales hacia Supabase
+   */
+  private async syncToSupabase(): Promise<void> {
+    try {
+      this.isSyncing.set(true);
+      await this.syncService.syncAll();
+      console.log('✅ Cambios sincronizados con Supabase');
+    } catch (error) {
+      console.error('❌ Error sincronizando con Supabase:', error);
+    } finally {
+      this.isSyncing.set(false);
     }
   }
 
@@ -147,10 +213,7 @@ export class SalesService {
         // Agregar venta al historial
         this.salesSignal.update((current) => [newSale, ...current]);
 
-        // Guardar en localStorage
-        this.saveToLocalStorage();
-
-        // 🔄 Sincronizar venta con Supabase
+        // 🔄 Sincronizar venta con Supabase en segundo plano
         this.syncService.queueForSync('sale', 'create', newSale);
         this.localDb.saveSale(newSale);
 
@@ -169,6 +232,9 @@ export class SalesService {
           };
           this.syncService.queueForSync('sale_item', 'create', saleItem);
         });
+
+        // Sincronizar cambios inmediatamente en segundo plano
+        this.syncToSupabase();
 
         // 🔔 Notificaciones automáticas
         this.checkAndNotify(newSale);
@@ -195,7 +261,14 @@ export class SalesService {
     this.salesSignal.update((current) =>
       current.map((s) => (s.id === id ? { ...s, status: 'cancelled' as const } : s))
     );
-    this.saveToLocalStorage();
+    
+    // Sincronizar cambio con Supabase
+    const cancelledSale = this.getSaleById(id);
+    if (cancelledSale) {
+      this.syncService.queueForSync('sale', 'update', cancelledSale);
+      this.localDb.saveSale(cancelledSale);
+      this.syncToSupabase();
+    }
   }
 
   // Filtrar ventas por rango de fechas
@@ -209,19 +282,6 @@ export class SalesService {
   // Filtrar ventas por método de pago
   getSalesByPaymentMethod(method: Sale['paymentMethod']): Sale[] {
     return this.salesSignal().filter((s) => s.paymentMethod === method);
-  }
-
-  // Cargar ventas desde localStorage
-  loadFromLocalStorage(): void {
-    const stored = this.storage.get<Sale[]>(this.STORAGE_KEY);
-    if (stored) {
-      this.salesSignal.set(stored);
-    }
-  }
-
-  // Guardar en localStorage
-  private saveToLocalStorage(): void {
-    this.storage.set(this.STORAGE_KEY, this.salesSignal());
   }
 
   // Generar ID único (UUID para Supabase)

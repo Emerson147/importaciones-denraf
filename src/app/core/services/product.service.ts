@@ -1,85 +1,115 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { Product } from '../models';
 import { ErrorHandlerService } from './error-handler.service';
-import { StorageService } from './storage.service';
 import { SyncService } from './sync.service';
 import { LocalDbService } from './local-db.service';
 
 /**
- * Servicio centralizado de productos
- * Fuente única de verdad para el inventario
- * Se sincroniza con ventas, inventario, POS, etc.
+ * 🚀 ProductService - Supabase First Architecture
+ * 
+ * Estrategia:
+ * 1. Supabase es la única fuente de verdad
+ * 2. IndexedDB como cache inteligente
+ * 3. Carga paralela: muestra cache mientras actualiza desde Supabase
+ * 4. Sin localStorage (eliminado)
  */
 @Injectable({
   providedIn: 'root',
 })
 export class ProductService {
-  private readonly STORAGE_KEY = 'products';
   private errorHandler = inject(ErrorHandlerService);
-  private storage = inject(StorageService);
   private syncService = inject(SyncService);
   private localDb = inject(LocalDbService);
 
   // ✅ FUENTE ÚNICA DE VERDAD - Todos los productos del sistema
-  private productsSignal = signal<Product[]>(this.loadFromStorage());
+  private productsSignal = signal<Product[]>([]);
 
-  // 🔒 Flag para evitar guardar a localStorage datos que vienen de Supabase
-  private skipLocalStorageSave = false;
+  // 🔄 Estado de carga y sincronización
+  isLoading = signal(true);
+  isSyncing = signal(false);
+  lastSyncTime = signal<Date | null>(null);
 
   constructor() {
-    // Auto-guardado en LocalStorage cuando cambian los productos
-    effect(() => {
-      const products = this.productsSignal();
-      // Solo guardar si no estamos cargando desde Supabase
-      if (!this.skipLocalStorageSave) {
-        this.saveToStorage(products);
-      }
-    });
-
-    // 🔄 Cargar datos desde Supabase al iniciar (si hay conexión)
-    this.initFromCloud();
+    // 🚀 Nueva estrategia: Supabase First + Cache Inteligente
+    this.initSupabaseFirst();
   }
 
   /**
-   * 🌐 Inicializar productos desde Supabase
-   * Permite que todos los usuarios vean los mismos datos
+   * 🚀 Estrategia Supabase-First con Cache Inteligente
+   * 
+   * 1. Muestra cache de IndexedDB INMEDIATAMENTE (0ms)
+   * 2. Carga desde Supabase EN PARALELO (fuente de verdad)
+   * 3. Actualiza UI con datos frescos de Supabase
+   * 4. Guarda en IndexedDB para próxima vez
    */
-  private async initFromCloud(): Promise<void> {
+  private async initSupabaseFirst(): Promise<void> {
+    console.log('🚀 Iniciando carga Supabase-First...');
+
+    // PASO 1: Mostrar cache INMEDIATAMENTE (sin bloquear)
+    this.showCacheIfAvailable();
+
+    // PASO 2: Cargar desde Supabase (fuente de verdad)
+    await this.loadFromSupabase();
+  }
+
+  /**
+   * Mostrar cache de IndexedDB inmediatamente (no bloquea)
+   * OPTIMIZADO: Promise no bloqueante para carga ultra rápida
+   */
+  private showCacheIfAvailable(): void {
+    // Ejecutar de forma asíncrona sin bloquear el flujo
+    this.localDb.getProducts().then(cachedProducts => {
+      if (cachedProducts && cachedProducts.length > 0) {
+        console.log(`⚡ Cache: ${cachedProducts.length} productos desde IndexedDB`);
+        this.productsSignal.set(cachedProducts);
+        this.isLoading.set(false); // UI lista INMEDIATAMENTE
+      } else {
+        console.log('📄 No hay cache, esperando Supabase...');
+      }
+    }).catch(error => {
+      console.warn('⚠️ Error leyendo cache:', error);
+    });
+  }
+
+  /**
+   * Cargar productos desde Supabase (fuente de verdad)
+   */
+  private async loadFromSupabase(): Promise<void> {
+    if (!navigator.onLine) {
+      console.log('📴 Sin conexión, usando solo cache');
+      this.isLoading.set(false);
+      return;
+    }
+
     try {
+      this.isSyncing.set(true);
+      console.log('☁️ Cargando desde Supabase...');
+
       const { products } = await this.syncService.pullFromCloud();
 
-      if (products.length > 0) {
-        console.log(`☁️ Cargados ${products.length} productos desde Supabase`);
-        // 🔒 Evitar guardar a localStorage (Supabase es la fuente de verdad)
-        this.skipLocalStorageSave = true;
+      if (products && products.length > 0) {
+        console.log(`✅ Supabase: ${products.length} productos cargados`);
+        
+        // Actualizar signal
         this.productsSignal.set(products);
-        // Restablecer flag después de un tick
-        setTimeout(() => {
-          this.skipLocalStorageSave = false;
-        }, 0);
+        
+        // Actualizar cache para próxima vez
+        await this.localDb.saveProducts(products);
+        
+        this.lastSyncTime.set(new Date());
+      } else if (this.productsSignal().length === 0) {
+        // Si no hay datos en Supabase ni en cache, usar datos iniciales
+        console.log('🌱 Cargando productos iniciales...');
+        const initialProducts = this.getInitialProducts();
+        this.productsSignal.set(initialProducts);
+        await this.localDb.saveProducts(initialProducts);
       }
     } catch (error) {
-      console.log('📴 Sin conexión, usando datos locales');
-    }
-  }
-
-  /**
-   * Cargar productos desde LocalStorage o usar datos iniciales
-   */
-  private loadFromStorage(): Product[] {
-    const stored = this.storage.get<Product[]>(this.STORAGE_KEY);
-    return stored || this.getInitialProducts();
-  }
-
-  /**
-   * Guardar productos en LocalStorage
-   */
-  private saveToStorage(products: Product[]): void {
-    try {
-      this.storage.set(this.STORAGE_KEY, products);
-    } catch (error) {
-      // Silenciar error de quota - Supabase tiene los datos
-      console.warn('⚠️ No se pudo guardar en localStorage (quota excedida)');
+      console.error('❌ Error cargando desde Supabase:', error);
+      this.errorHandler.handleError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      this.isLoading.set(false);
+      this.isSyncing.set(false);
     }
   }
 

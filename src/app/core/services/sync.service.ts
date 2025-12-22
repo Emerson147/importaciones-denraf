@@ -249,6 +249,8 @@ export class SyncService {
   /**
    * Descargar datos frescos de Supabase a IndexedDB
    * Retorna los productos adaptados al formato Angular
+   * 
+   * 🚀 OPTIMIZADO: Usa paginación y límites para consultas más rápidas
    */
   async pullFromCloud(): Promise<{ products: any[]; sales: any[] }> {
     if (!this.isOnline()) {
@@ -256,10 +258,12 @@ export class SyncService {
     }
 
     try {
-      // Productos
+      // 📦 Productos - Solo productos activos con columnas específicas
       const { data: productosRaw, error: prodError } = await supabase
         .from('productos')
-        .select('*')
+        .select('id, name, category, brand, price, cost, stock, min_stock, sizes, colors, image, barcode, status, created_at, updated_at')
+        .eq('status', 'active') // Solo productos activos
+        .gte('stock', 0) // Solo productos con stock >= 0
         .order('name');
 
       if (prodError) {
@@ -273,12 +277,19 @@ export class SyncService {
         await this.localDb.saveProducts(productos);
       }
 
-      // Ventas (últimas 100)
+      // 🛒 Ventas - Solo últimas 100 con columnas específicas e items
+      // Para reportes antiguos, se cargarán bajo demanda
       const { data: ventasRaw, error: saleError } = await supabase
         .from('ventas')
-        .select('*')
+        .select(`
+          id, sale_number, subtotal, discount, tax, total, 
+          payment_method, status, notes, created_by, vendedor_id, created_at,
+          venta_items (
+            id, product_id, product_name, quantity, size, color, unit_price, subtotal
+          )
+        `)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(100); // Últimas 100 ventas para dashboard
 
       if (saleError) {
         console.error('Error descargando ventas:', saleError);
@@ -299,7 +310,7 @@ export class SyncService {
   }
 
   /**
-   * 🔄 Adaptar datos de Supabase a formato Angular
+   *  Adaptar datos de Supabase a formato Angular
    * Supabase usa snake_case, Angular usa camelCase
    */
   private adaptFromSupabase(type: string, data: any): any {
@@ -324,10 +335,24 @@ export class SyncService {
     }
 
     if (type === 'sale') {
+      // Adaptar items si vienen de la relación venta_items
+      const items = data.venta_items 
+        ? data.venta_items.map((item: any) => ({
+            productId: item.product_id,
+            productName: item.product_name,
+            quantity: item.quantity,
+            size: item.size,
+            color: item.color,
+            unitPrice: Number(item.unit_price),
+            subtotal: Number(item.subtotal)
+          }))
+        : [];
+
       return {
         id: data.id,
         saleNumber: data.sale_number,
         date: data.created_at ? new Date(data.created_at) : new Date(),
+        items: items, // Items adaptados desde venta_items
         subtotal: Number(data.subtotal),
         discount: Number(data.discount || 0),
         tax: Number(data.tax || 0),
@@ -341,5 +366,80 @@ export class SyncService {
     }
 
     return data;
+  }
+
+  /**
+   * 🔍 Cargar ventas por rango de fechas (lazy loading para reportes)
+   */
+  async pullSalesByDateRange(startDate: Date, endDate: Date): Promise<any[]> {
+    if (!this.isOnline()) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select(`
+          id, sale_number, subtotal, discount, tax, total, 
+          payment_method, status, notes, created_by, vendedor_id, created_at,
+          venta_items (
+            id, product_id, product_name, quantity, size, color, unit_price, subtotal
+          )
+        `)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((v: any) => this.adaptFromSupabase('sale', v));
+    } catch (error) {
+      console.error('Error cargando ventas por rango:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🔍 Cargar productos por categoría (lazy loading)
+   */
+  async pullProductsByCategory(category: string): Promise<any[]> {
+    if (!this.isOnline()) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('productos')
+        .select('id, name, category, brand, price, cost, stock, min_stock, sizes, colors, image, barcode, status')
+        .eq('category', category)
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+
+      return (data || []).map((p: any) => this.adaptFromSupabase('product', p));
+    } catch (error) {
+      console.error('Error cargando productos por categoría:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🔍 Buscar productos (lazy loading con búsqueda)
+   */
+  async searchProducts(query: string): Promise<any[]> {
+    if (!this.isOnline()) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('productos')
+        .select('id, name, category, brand, price, stock, image, barcode')
+        .eq('status', 'active')
+        .or(`name.ilike.%${query}%,barcode.eq.${query},brand.ilike.%${query}%`)
+        .limit(20);
+
+      if (error) throw error;
+
+      return (data || []).map((p: any) => this.adaptFromSupabase('product', p));
+    } catch (error) {
+      console.error('Error buscando productos:', error);
+      return [];
+    }
   }
 }

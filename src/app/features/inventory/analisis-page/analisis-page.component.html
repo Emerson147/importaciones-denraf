@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-6 md:p-8 transition-colors duration-300">
+<div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-6 md:p-8 transition-colors duration-100">
   <div class="max-w-[1600px] mx-auto space-y-6">
     
     <!-- Header -->
@@ -15,7 +15,7 @@
     <!-- Métricas Inteligentes -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- Valor Total -->
-      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
         <div class="flex items-center gap-3 mb-3">
           <div class="h-10 w-10 rounded-xl bg-stone-800 dark:bg-stone-700 flex items-center justify-center text-white">
             <span class="material-icons-outlined">inventory_2</span>
@@ -27,7 +27,7 @@
       </div>
 
       <!-- Productos Críticos -->
-      <div class="rounded-2xl border border-red-200/30 dark:border-red-900/20 shadow-sm p-6 bg-red-50/20 dark:bg-red-950/10 transition-colors duration-300">
+      <div class="rounded-2xl border border-red-200/30 dark:border-red-900/20 shadow-sm p-6 bg-red-50/20 dark:bg-red-950/10 transition-colors duration-100">
         <div class="flex items-center gap-3 mb-3">
           <div class="h-10 w-10 rounded-xl bg-red-600/70 dark:bg-red-600/60 flex items-center justify-center text-white">
             <span class="material-icons-outlined">error_outline</span>
@@ -39,7 +39,7 @@
       </div>
 
       <!-- Rotación Promedio -->
-      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
         <div class="flex items-center gap-3 mb-3">
           <div class="h-10 w-10 rounded-xl bg-stone-700 dark:bg-stone-600 flex items-center justify-center text-white">
             <span class="material-icons-outlined">autorenew</span>
@@ -51,7 +51,7 @@
       </div>
 
       <!-- Alertas Activas -->
-      <div class="rounded-2xl border border-amber-200/30 dark:border-amber-900/20 shadow-sm p-6 bg-amber-50/20 dark:bg-amber-950/10 transition-colors duration-300">
+      <div class="rounded-2xl border border-amber-200/30 dark:border-amber-900/20 shadow-sm p-6 bg-amber-50/20 dark:bg-amber-950/10 transition-colors duration-100">
         <div class="flex items-center gap-3 mb-3">
           <div class="h-10 w-10 rounded-xl bg-amber-600/70 dark:bg-amber-600/60 flex items-center justify-center text-white">
             <span class="material-icons-outlined">notifications_active</span>
@@ -65,7 +65,7 @@
 
     <!-- Alertas Críticas -->
     @if (stockAlerts().length > 0) {
-      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Alertas de Stock</h2>
           <span class="text-xs text-stone-400 dark:text-stone-500">{{ stockAlerts().length }} alertas activas</span>
@@ -118,7 +118,7 @@
     <!-- Gráficos de Análisis -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Rotación de Productos -->
-      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
         <div class="mb-6">
           <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Rotación de Productos</h2>
           <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Top 10 productos más vendidos</p>
@@ -138,7 +138,7 @@
       </div>
 
       <!-- Estado del Inventario -->
-      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
         <div class="mb-6">
           <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Estado del Inventario</h2>
           <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Distribución por estado</p>
@@ -158,7 +158,7 @@
 
     <!-- Sugerencias de Reorden -->
     @if (reorderSuggestions().length > 0) {
-      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+      <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
         <div class="flex items-center justify-between mb-6">
           <div>
             <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Sugerencias de Reabastecimiento</h2>
@@ -220,7 +220,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Productos Críticos -->
       @if (criticalProducts().length > 0) {
-        <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
           <div class="mb-4">
             <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Productos Críticos</h2>
             <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Stock bajo o agotado</p>
@@ -251,7 +251,7 @@
 
       <!-- Alta Demanda -->
       @if (highDemandProducts().length > 0) {
-        <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-300">
+        <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
           <div class="mb-4">
             <h2 class="text-xl font-bold text-stone-800 dark:text-stone-100">Alta Demanda</h2>
             <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Productos más vendidos</p>

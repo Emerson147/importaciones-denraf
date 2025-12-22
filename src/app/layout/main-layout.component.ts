@@ -8,6 +8,7 @@ import { UiNotificationCenterComponent } from '../shared/ui/ui-notification-cent
 import { ConnectionStatusComponent } from '../shared/ui/connection-status/connection-status.component';
 import { PwaInstallPromptComponent } from '../shared/ui/pwa-install-prompt/pwa-install-prompt.component';
 import { UiErrorLoggerComponent } from '../shared/ui/ui-error-logger/ui-error-logger.component';
+import { SyncIndicatorComponent } from '../shared/ui/sync-indicator/sync-indicator.component';
 import { ClickOutsideDirective } from '../shared/directives/click-outside/click-outside.component';
 
 @Component({
@@ -23,6 +24,7 @@ import { ClickOutsideDirective } from '../shared/directives/click-outside/click-
     ConnectionStatusComponent,
     PwaInstallPromptComponent,
     UiErrorLoggerComponent,
+    SyncIndicatorComponent,
     ClickOutsideDirective
   ],
   templateUrl: './main-layout.component.html',

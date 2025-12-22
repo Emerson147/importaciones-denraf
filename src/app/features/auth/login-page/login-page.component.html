@@ -3,7 +3,7 @@
     <img
       src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop"
       alt="Denfar Collection"
-      class="absolute inset-0 h-full w-full object-cover transition-transform duration-[2s] hover:scale-105"
+      class="absolute inset-0 h-full w-full object-cover"
     />
 
     <div class="absolute inset-0 bg-black/10"></div>
@@ -52,7 +52,7 @@
         } @else { @for (user of users(); track user.id) {
         <button
           (click)="selectUser(user.id)"
-          class="w-full flex items-center gap-4 px-5 py-4 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 transition-all text-left hover:scale-[1.01] active:scale-[0.99] hover:shadow-md"
+          class="w-full flex items-center gap-4 px-5 py-4 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 transition-colors duration-100 text-left"
         >
           <div
             class="h-12 w-12 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0"
@@ -133,7 +133,7 @@
         <!-- Botón Volver -->
         <button
           (click)="backToUsers()"
-          class="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 transition-all text-stone-700 hover:scale-[1.01] active:scale-[0.99]"
+          class="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 transition-colors duration-100 text-stone-700"
         >
           <span class="material-icons-outlined text-xl">arrow_back</span>
           <span class="font-medium">Cambiar usuario</span>

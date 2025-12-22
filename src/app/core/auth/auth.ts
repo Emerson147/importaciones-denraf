@@ -1,46 +1,70 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { User } from '../models';
-import { StorageService } from '../services/storage.service';
 import { SyncService } from '../services/sync.service';
+import { LocalDbService } from '../services/local-db.service';
 import { supabase } from '../services/supabase.service';
 
+/**
+ * 🔐 AuthService
+ * Arquitectura: Supabase-first
+ * - Carga usuarios desde Supabase al iniciar
+ * - IndexedDB como caché local únicamente
+ * - No usa localStorage
+ */
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   private router = inject(Router);
-  private storage = inject(StorageService);
   private syncService = inject(SyncService);
+  private localDb = inject(LocalDbService);
 
-  private readonly USERS_KEY = 'users';
   private readonly CURRENT_USER_KEY = 'current_user';
 
-  // 🔄 Estado de carga de usuarios
+  // Estados
   isLoadingUsers = signal(true);
-
-  // Usuarios disponibles - ahora prioriza Supabase sobre localStorage
+  isSyncing = signal(false);
   private usersList = signal<User[]>([]);
-
-  // Estado del usuario actual
-  private currentUserSig = signal<User | null>(this.loadUserFromStorage());
+  private currentUserSig = signal<User | null>(this.loadCurrentUserFromLocalStorage());
 
   constructor() {
-    this.initFromCloud();
+    this.initSupabaseFirst();
   }
 
   /**
-   * 🌐 Cargar usuarios desde Supabase al iniciar
-   * Prioridad: Supabase > localStorage > usuarios de prueba
+   * Inicializar usuarios desde Supabase (fuente de verdad)
    */
-  private async initFromCloud(): Promise<void> {
+  private async initSupabaseFirst(): Promise<void> {
+    // 1. Cargar cache mientras tanto
+    const cached = await this.localDb.getUsers();
+    if (cached && cached.length > 0) {
+      this.usersList.set(cached);
+      this.isLoadingUsers.set(false);
+    }
+
+    // 2. Cargar desde Supabase
+    await this.loadFromSupabase();
+  }
+
+  /**
+   * Cargar usuarios desde Supabase (fuente de verdad)
+   */
+  private async loadFromSupabase(): Promise<void> {
+    if (!navigator.onLine) {
+      console.log('📴 Sin conexión, usando cache');
+      this.isLoadingUsers.set(false);
+      return;
+    }
+
     try {
+      this.isSyncing.set(true);
+      console.log('☁️ Cargando usuarios desde Supabase...');
+
       const { data, error } = await supabase.from('usuarios').select('*');
 
       if (error) {
-        console.error('Error cargando usuarios:', error);
-        // Fallback a localStorage
-        this.loadFromLocalStorageOrDefaults();
+        console.error('❌ Error cargando usuarios:', error);
         return;
       }
 
@@ -54,41 +78,40 @@ export class AuthService {
           avatar: u.avatar,
           createdAt: u.created_at ? new Date(u.created_at) : new Date(),
         }));
-        console.log(`☁️ Cargados ${users.length} usuarios desde Supabase`);
+        
+        console.log(`✅ Supabase: ${users.length} usuarios cargados`);
         this.usersList.set(users);
-        // Actualizar localStorage con datos de Supabase
-        this.saveUsersToStorage();
-      } else {
-        // Supabase vacío, usar localStorage o defaults
-        this.loadFromLocalStorageOrDefaults();
+        await this.localDb.saveUsers(users);
       }
     } catch (error) {
-      console.log('📴 Sin conexión, usando usuarios locales');
-      this.loadFromLocalStorageOrDefaults();
+      console.error('❌ Error cargando usuarios desde Supabase:', error);
     } finally {
       this.isLoadingUsers.set(false);
+      this.isSyncing.set(false);
     }
   }
 
   /**
-   * Cargar usuarios desde localStorage o usar defaults
+   * Sincronizar cambios locales hacia Supabase
    */
-  private loadFromLocalStorageOrDefaults(): void {
-    const stored = this.loadUsersFromStorage();
-    if (stored && stored.length > 0) {
-      this.usersList.set(stored);
-    } else {
-      // Usuarios por defecto solo si no hay datos
-      this.usersList.set([
-        {
-          id: 'user-1',
-          name: 'Admin',
-          role: 'admin',
-          pin: '1234',
-          createdAt: new Date('2024-01-01'),
-        },
-      ]);
+  private async syncToSupabase(): Promise<void> {
+    try {
+      this.isSyncing.set(true);
+      await this.syncService.syncAll();
+      console.log('✅ Usuarios sincronizados con Supabase');
+    } catch (error) {
+      console.error('❌ Error sincronizando usuarios:', error);
+    } finally {
+      this.isSyncing.set(false);
     }
+  }
+
+  /**
+   * Cargar usuario actual desde localStorage (solo sesión)
+   */
+  private loadCurrentUserFromLocalStorage(): User | null {
+    const stored = localStorage.getItem(this.CURRENT_USER_KEY);
+    return stored ? JSON.parse(stored) : null;
   }
 
   // Computadas
@@ -119,10 +142,11 @@ export class AuthService {
     };
 
     this.usersList.update((users) => [...users, newUser]);
-    this.saveUsersToStorage();
 
-    // 🔄 Sincronizar con Supabase
+    // 🔄 Sincronizar con Supabase en segundo plano
     this.syncService.queueForSync('user', 'create', newUser);
+    this.localDb.saveUser(newUser);
+    this.syncToSupabase();
 
     return newUser;
   }
@@ -146,11 +170,11 @@ export class AuthService {
       return updated;
     });
 
-    this.saveUsersToStorage();
-
     // 🔄 Sincronizar con Supabase
     const updatedUser = this.usersList()[userIndex];
     this.syncService.queueForSync('user', 'update', updatedUser);
+    this.localDb.saveUser(updatedUser);
+    this.syncToSupabase();
 
     return true;
   }
@@ -162,10 +186,11 @@ export class AuthService {
     }
 
     this.usersList.update((users) => users.filter((u) => u.id !== userId));
-    this.saveUsersToStorage();
 
     // 🔄 Sincronizar eliminación con Supabase
     this.syncService.queueForSync('user', 'delete', { id: userId });
+    this.localDb.deleteUser(userId);
+    this.syncToSupabase();
 
     return true;
   }
@@ -199,24 +224,12 @@ export class AuthService {
   // Logout
   logout() {
     this.currentUserSig.set(null);
-    this.storage.remove(this.CURRENT_USER_KEY);
+    localStorage.removeItem(this.CURRENT_USER_KEY);
     this.router.navigate(['/login']);
   }
 
-  // Persistencia
+  // Persistencia de sesión actual (solo localStorage para sesión)
   private saveUserToStorage(user: User) {
-    this.storage.set(this.CURRENT_USER_KEY, user);
-  }
-
-  private loadUserFromStorage(): User | null {
-    return this.storage.get<User>(this.CURRENT_USER_KEY);
-  }
-
-  private saveUsersToStorage() {
-    this.storage.set(this.USERS_KEY, this.usersList());
-  }
-
-  private loadUsersFromStorage(): User[] | null {
-    return this.storage.get<User[]>(this.USERS_KEY);
+    localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(user));
   }
 }

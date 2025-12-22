@@ -16,8 +16,8 @@ export class App implements OnInit {
   searchService = inject(SearchService);
 
   ngOnInit() {
-    // Cargar ventas guardadas al iniciar la app
-    this.salesService.loadFromLocalStorage();
+    // SalesService se inicializa automáticamente con Supabase-first
+    // No es necesario cargar manualmente
   }
 
   @HostListener('document:keydown', ['$event'])

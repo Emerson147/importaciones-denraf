@@ -6,7 +6,7 @@
  */
 import { Injectable, signal } from '@angular/core';
 import { openDB, IDBPDatabase, DBSchema } from 'idb';
-import type { Product, Sale } from '../models';
+import type { Product, Sale, User } from '../models';
 
 // Esquema de la base de datos local
 interface DenrafDB extends DBSchema {
@@ -19,6 +19,10 @@ interface DenrafDB extends DBSchema {
     key: string;
     value: Sale;
     indexes: { 'por-fecha': string };
+  };
+  usuarios: {
+    key: string;
+    value: User;
   };
   sync_queue: {
     key: string;
@@ -39,7 +43,7 @@ export interface SyncQueueItem {
 export class LocalDbService {
   private db = signal<IDBPDatabase<DenrafDB> | null>(null);
   private dbName = 'denraf-offline-db';
-  private dbVersion = 1;
+  private dbVersion = 2; // Incrementado para agregar usuarios
 
   isReady = signal(false);
 
@@ -53,7 +57,7 @@ export class LocalDbService {
   private async init() {
     try {
       const database = await openDB<DenrafDB>(this.dbName, this.dbVersion, {
-        upgrade(db) {
+        upgrade(db, oldVersion) {
           // Store de productos
           if (!db.objectStoreNames.contains('productos')) {
             const productStore = db.createObjectStore('productos', { keyPath: 'id' });
@@ -64,6 +68,11 @@ export class LocalDbService {
           if (!db.objectStoreNames.contains('ventas')) {
             const saleStore = db.createObjectStore('ventas', { keyPath: 'id' });
             saleStore.createIndex('por-fecha', 'createdAt');
+          }
+
+          // Store de usuarios (nuevo en v2)
+          if (!db.objectStoreNames.contains('usuarios')) {
+            db.createObjectStore('usuarios', { keyPath: 'id' });
           }
 
           // Store de cola de sincronización
@@ -193,6 +202,40 @@ export class LocalDbService {
     return db.count('sync_queue');
   }
 
+  // ========== USUARIOS ==========
+
+  async getUsers(): Promise<User[]> {
+    const db = this.db();
+    if (!db) return [];
+    return db.getAll('usuarios');
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const db = this.db();
+    if (!db) return undefined;
+    return db.get('usuarios', id);
+  }
+
+  async saveUser(user: User): Promise<void> {
+    const db = this.db();
+    if (!db) return;
+    await db.put('usuarios', user);
+  }
+
+  async saveUsers(users: User[]): Promise<void> {
+    const db = this.db();
+    if (!db) return;
+    const tx = db.transaction('usuarios', 'readwrite');
+    await Promise.all(users.map((user) => tx.store.put(user)));
+    await tx.done;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    const db = this.db();
+    if (!db) return;
+    await db.delete('usuarios', id);
+  }
+
   // ========== UTILIDADES ==========
 
   async clearAll(): Promise<void> {
@@ -200,6 +243,7 @@ export class LocalDbService {
     if (!db) return;
     await db.clear('productos');
     await db.clear('ventas');
+    await db.clear('usuarios');
     await db.clear('sync_queue');
   }
 }

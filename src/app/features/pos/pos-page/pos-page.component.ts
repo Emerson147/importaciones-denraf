@@ -1,21 +1,27 @@
-import { Component, computed, signal, inject, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, computed, signal, inject, HostListener, ViewChild, ElementRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UiTicketComponent } from '../../../shared/ui/ui-ticket/ui-ticket.component';
+import { UiSkeletonComponent } from '../../../shared/ui';
+import { SalesService } from '../../../core/services/sales.service';
+import { ProductService } from '../../../core/services/product.service';
+import { OfflineService } from '../../../core/services/offline.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthService } from '../../../core/auth/auth';
 import { LoggerService } from '../../../core/services/logger.service';
-import { Product, ProductVariant } from '../../../core/models';
+import { Sale, SaleItem, Product, ProductVariant } from '../../../core/models';
 import { UiAnimatedDialogComponent } from '../../../shared/ui/ui-animated-dialog/ui-animated-dialog.component';
-import { PosCartFacade, CartItem } from '../facades/pos-cart.facade';
-import { PosProductFacade } from '../facades/pos-product.facade';
-import { PosPaymentFacade } from '../facades/pos-payment.facade';
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+  variant?: ProductVariant; // Variante seleccionada (talla + color)
+}
 
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiTicketComponent, UiAnimatedDialogComponent],
-  providers: [PosCartFacade, PosProductFacade, PosPaymentFacade],
+  imports: [CommonModule, FormsModule, UiTicketComponent, UiSkeletonComponent, UiAnimatedDialogComponent],
   template: `
     <div class="relative flex flex-col md:flex-row h-[calc(100vh-2rem)] gap-3 md:gap-6 p-3 md:p-6 w-full">
       
@@ -61,7 +67,7 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
                 placeholder="Buscar producto..."
                 [(ngModel)]="searchQuery"
                 (input)="onSearchChange($event)"
-                class="w-full pl-8 md:pl-10 pr-3 md:pr-16 py-2 md:py-2.5 bg-white border border-stone-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all text-sm"
+                class="w-full pl-8 md:pl-10 pr-3 md:pr-16 py-2 md:py-2.5 bg-white border border-stone-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-colors duration-100 text-sm"
                 autocomplete="off"
               />
               <kbd class="hidden md:inline-block absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] bg-stone-100 text-stone-500 rounded border border-stone-200 font-mono">F2</kbd>
@@ -71,23 +77,23 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
           <!-- Filtros por categoría -->
           <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             <button
-              (click)="setCategory(null)"
-              [class.bg-stone-900]="selectedCategory === null"
-              [class.text-white]="selectedCategory === null"
-              [class.bg-stone-100]="selectedCategory !== null"
-              [class.text-stone-600]="selectedCategory !== null"
-              class="px-4 py-2 rounded-full text-sm font-medium transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+              (click)="selectedCategory.set(null)"
+              [class.bg-stone-900]="selectedCategory() === null"
+              [class.text-white]="selectedCategory() === null"
+              [class.bg-stone-100]="selectedCategory() !== null"
+              [class.text-stone-600]="selectedCategory() !== null"
+              class="px-4 py-2 rounded-full text-sm font-medium transition-colors duration-100 whitespace-nowrap"
             >
               Todas
             </button>
             @for (category of categories(); track category) {
               <button
-                (click)="setCategory(category)"
-                [class.bg-stone-900]="selectedCategory === category"
-                [class.text-white]="selectedCategory === category"
-                [class.bg-stone-100]="selectedCategory !== category"
-                [class.text-stone-600]="selectedCategory !== category"
-                class="px-4 py-2 rounded-full text-sm font-medium transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                (click)="selectedCategory.set(category)"
+                [class.bg-stone-900]="selectedCategory() === category"
+                [class.text-white]="selectedCategory() === category"
+                [class.bg-stone-100]="selectedCategory() !== category"
+                [class.text-stone-600]="selectedCategory() !== category"
+                class="px-4 py-2 rounded-full text-sm font-medium transition-colors duration-100 whitespace-nowrap"
               >
                 {{ category }}
               </button>
@@ -98,18 +104,9 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
         <!-- Grid de productos -->
         <div class="flex-1 overflow-y-auto no-scrollbar pr-2">
           @if (loading()) {
-            <!-- Skeleton loading -->
+            <!-- Skeleton loading con más elementos para mejor UX -->
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-3">
-              @for (skeleton of [1,2,3,4,5,6,7,8]; track skeleton) {
-                <div class="bg-white rounded-2xl border border-stone-100 overflow-hidden animate-pulse">
-                  <div class="aspect-[3/4] bg-stone-100"></div>
-                  <div class="p-2.5 space-y-2">
-                    <div class="h-2 bg-stone-100 rounded w-1/2"></div>
-                    <div class="h-3 bg-stone-100 rounded w-3/4"></div>
-                    <div class="h-3 bg-stone-100 rounded w-1/3"></div>
-                  </div>
-                </div>
-              }
+              <app-ui-skeleton variant="product" [repeat]="18" />
             </div>
           } @else if (filteredProducts().length === 0) {
             <!-- Estado vacío -->
@@ -130,7 +127,7 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
                   [disabled]="product.stock === 0"
                   [class.opacity-50]="product.stock === 0"
                   [class.cursor-not-allowed]="product.stock === 0"
-                  class="group relative flex flex-col text-left bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md hover:border-stone-300 transition-all overflow-hidden active:scale-[0.98] disabled:hover:shadow-sm disabled:hover:border-stone-100"
+                  class="group relative flex flex-col text-left bg-white rounded-2xl border border-stone-100 shadow-sm hover:border-stone-300 transition-colors duration-100 overflow-hidden disabled:hover:border-stone-100"
                   (click)="addToCart(product)"
                   [attr.aria-label]="'Agregar ' + product.name + ' al carrito'"
                 >
@@ -139,7 +136,7 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
                       <img 
                         [src]="product.image" 
                         [alt]="product.name"
-                        class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        class="h-full w-full object-cover"
                         loading="lazy"
                       />
                     } @else {
@@ -219,7 +216,7 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
                 Ticket de Venta
               </h2>
               <p class="text-xs text-stone-400 mt-1">
-                Orden #{{ currentTicketNumber() }} • {{ cart().length }} items
+                Orden #{{ currentTicketNumber }} • {{ cart().length }} items
               </p>
             </div>
             
@@ -384,19 +381,19 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
               <div class="grid grid-cols-3 gap-2">
                 <button
                   (click)="quickPayment('cash')"
-                  class="px-3 py-2 bg-white rounded-lg border border-stone-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all text-xs font-semibold text-stone-700 hover:text-emerald-700"
+                  class="px-3 py-2 bg-white rounded-lg border border-stone-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors duration-100 text-xs font-semibold text-stone-700 hover:text-emerald-700"
                 >
                   💵 Efectivo
                 </button>
                 <button
                   (click)="quickPayment('yape')"
-                  class="px-3 py-2 bg-white rounded-lg border border-stone-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-xs font-semibold text-stone-700 hover:text-purple-700"
+                  class="px-3 py-2 bg-white rounded-lg border border-stone-200 hover:border-purple-500 hover:bg-purple-50 transition-colors duration-100 text-xs font-semibold text-stone-700 hover:text-purple-700"
                 >
                   📱 Yape
                 </button>
                 <button
                   (click)="quickPayment('card')"
-                  class="px-3 py-2 bg-white rounded-lg border border-stone-200 hover:border-blue-500 hover:bg-blue-50 transition-all text-xs font-semibold text-stone-700 hover:text-blue-700"
+                  class="px-3 py-2 bg-white rounded-lg border border-stone-200 hover:border-blue-500 hover:bg-blue-50 transition-colors duration-100 text-xs font-semibold text-stone-700 hover:text-blue-700"
                 >
                   💳 Tarjeta
                 </button>
@@ -415,7 +412,7 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
             <button
               (click)="checkout()"
               [disabled]="cart().length === 0"
-              class="w-full py-3.5 text-sm font-bold rounded-xl bg-stone-900 hover:bg-black text-white shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              class="w-full py-3.5 text-sm font-bold rounded-xl bg-stone-900 hover:bg-black text-white shadow-lg transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               aria-label="Proceder al pago"
             >
               <span class="material-icons-outlined text-lg">payments</span>
@@ -575,17 +572,17 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
 
                 <div class="grid grid-cols-3 gap-2">
                   <button (click)="quickPayment('cash'); showMobileCart.set(false)"
-                    class="px-3 py-3 border border-stone-200 hover:border-emerald-500 hover:bg-emerald-50 rounded-lg transition-all text-xs font-medium text-stone-700 hover:text-emerald-700 flex flex-col items-center justify-center gap-1 bg-white active:scale-95">
+                    class="px-3 py-3 border border-stone-200 hover:border-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors duration-100 text-xs font-medium text-stone-700 hover:text-emerald-700 flex flex-col items-center justify-center gap-1 bg-white">
                     <span class="text-xl">💵</span>
                     <span>Efectivo</span>
                   </button>
                   <button (click)="quickPayment('yape'); showMobileCart.set(false)"
-                    class="px-3 py-3 border border-stone-200 hover:border-purple-500 hover:bg-purple-50 rounded-lg transition-all text-xs font-medium text-stone-700 hover:text-purple-700 flex flex-col items-center justify-center gap-1 bg-white active:scale-95">
+                    class="px-3 py-3 border border-stone-200 hover:border-purple-500 hover:bg-purple-50 rounded-lg transition-colors duration-100 text-xs font-medium text-stone-700 hover:text-purple-700 flex flex-col items-center justify-center gap-1 bg-white">
                     <span class="text-xl">📱</span>
                     <span>Yape</span>
                   </button>
                   <button (click)="quickPayment('card'); showMobileCart.set(false)"
-                    class="px-3 py-3 border border-stone-200 hover:border-blue-500 hover:bg-blue-50 rounded-lg transition-all text-xs font-medium text-stone-700 hover:text-blue-700 flex flex-col items-center justify-center gap-1 bg-white active:scale-95">
+                    class="px-3 py-3 border border-stone-200 hover:border-blue-500 hover:bg-blue-50 rounded-lg transition-colors duration-100 text-xs font-medium text-stone-700 hover:text-blue-700 flex flex-col items-center justify-center gap-1 bg-white">
                     <span class="text-xl">💳</span>
                     <span>Tarjeta</span>
                   </button>
@@ -606,7 +603,7 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
       [isOpen]="showTicket()"
       [items]="cart()"
       [total]="total()"
-      [ticketNumber]="currentTicketNumber()"
+      [ticketNumber]="currentTicketNumber"
       [clientName]="clientName"
       [clientPhone]="clientPhone"
       [paymentMethod]="paymentMethod"
@@ -615,6 +612,14 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
       (ticketPrinted)="onTicketPrinted()"
       (ticketSent)="onTicketSent()"
     ></app-ui-ticket>
+
+    <!-- Toast de notificaciones -->
+    @if (showToast()) {
+      <div class="fixed bottom-6 right-6 bg-stone-900 text-white px-5 py-3 rounded-xl shadow-2xl animate-in slide-in-from-bottom-2 z-50 flex items-center gap-3">
+        <span class="material-icons-outlined text-lg">{{ toastIcon() }}</span>
+        <span class="text-sm font-medium">{{ toastMessage() }}</span>
+      </div>
+    }
 
     <!-- Modal selector de variantes -->
     <app-ui-animated-dialog 
@@ -821,12 +826,10 @@ import { PosPaymentFacade } from '../facades/pos-payment.facade';
   `]
 })
 export class PosPageComponent {
-  // Facades
-  private cartFacade = inject(PosCartFacade);
-  private productFacade = inject(PosProductFacade);
-  private paymentFacade = inject(PosPaymentFacade);
-  
   // Servicios
+  private salesService = inject(SalesService);
+  private productService = inject(ProductService);
+  private offlineService = inject(OfflineService);
   private toastService = inject(ToastService);
   private authService = inject(AuthService);
   private logger = inject(LoggerService);
@@ -834,51 +837,31 @@ export class PosPageComponent {
   // ViewChild para enfoque automático
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
 
-  // Signals de UI
+  // Signals
+  cart = signal<CartItem[]>([]);
+  searchQuery = signal('');
+  selectedCategory = signal<string | null>(null);
   showTicket = signal(false);
-  loading = signal(false);
   showClientForm = signal(false);
-  showMobileCart = signal(false);
-  variantSelectorOpen = signal(false);
-  selectedProductForVariant = signal<Product | null>(null);
-  selectedVariant = signal<ProductVariant | null>(null);
+  showToast = signal(false);
+  toastMessage = signal('');
+  toastIcon = signal('check_circle');
+  showMobileCart = signal(false); // 📱 Control del bottom sheet móvil
 
-  // Exponer datos de facades
-  cart = this.cartFacade.cart;
-  
-  // Delegación de búsqueda y filtros a facade
-  get searchQuery() { return this.productFacade.searchQuery(); }
-  set searchQuery(value: string) { this.productFacade.search(value); }
-  
-  get selectedCategory() { return this.productFacade.selectedCategory(); }
-  setCategory(category: string | null) { this.productFacade.filterByCategory(category); }
-  
-  filteredProducts = this.productFacade.filteredProducts;
-  categories = this.productFacade.categories;
-  products = this.productFacade.products;
-  
-  // Estado del pago
-  isOnline = this.paymentFacade.isOnline;
-  pendingSalesCount = this.paymentFacade.pendingSalesCount;
-  currentTicketNumber = this.paymentFacade.currentTicketNumber;
-  
-  // Datos del cliente (compatibilidad con template)
-  clientName = '';
-  clientPhone = '';
-  paymentMethod = '';
-  amountPaid = 0;
-  discount = 0;
+  // 🔄 Estado de carga conectado al ProductService
+  loading = computed(() => this.productService.isLoading());
 
-  // Computed
-  subtotal = this.cartFacade.subtotal;
-  tax = this.cartFacade.tax;
-  total = this.cartFacade.total;
-
-  // Constructor con enfoque automático
+  // Constructor optimizado para carga rápida
   constructor() {
-    setTimeout(() => {
-      this.searchInput?.nativeElement?.focus();
-    }, 100);
+    // Enfocar input de búsqueda solo después de que termine la carga
+    // para no interferir con el renderizado inicial
+    effect(() => {
+      if (!this.loading()) {
+        setTimeout(() => {
+          this.searchInput?.nativeElement?.focus();
+        }, 150);
+      }
+    });
   }
 
   // 🔥 ATAJOS DE TECLADO PROFESIONALES
@@ -909,25 +892,141 @@ export class PosPageComponent {
     } else if (this.showTicket()) {
       this.showTicket.set(false);
     } else {
-      this.productFacade.clearFilters();
+      this.clearFilters();
     }
   }
 
+  // Datos del ticket
+  currentTicketNumber = 4031;
+  clientName = 'Cliente';
+  clientPhone = '';
+  paymentMethod = '';
+  amountPaid = 0;
+  discount = 0; // Descuento aplicado
+
+  // Selector de variantes
+  variantSelectorOpen = signal(false);
+  selectedProductForVariant = signal<Product | null>(null);
+  selectedVariant = signal<ProductVariant | null>(null);
+
+  // ✅ PRODUCTOS SINCRONIZADOS DESDE EL SERVICIO CENTRAL
+  products = this.productService.products;
+
+  // Computed
+  categories = computed(() => {
+    const cats = new Set(this.products().map(p => p.category));
+    return Array.from(cats);
+  });
+
+  // 📊 ESTADÍSTICAS DIARIAS
+  todaySales = computed(() => {
+    const today = new Date().toDateString();
+    return this.salesService.sales().filter(s => 
+      new Date(s.date).toDateString() === today
+    );
+  });
+
+  dailyRevenue = computed(() => {
+    return this.todaySales().reduce((sum, s) => sum + s.total, 0);
+  });
+
+  dailyProductsSold = computed(() => {
+    return this.todaySales().reduce((sum, s) => 
+      sum + s.items.reduce((itemSum, item) => itemSum + item.quantity, 0)
+    , 0);
+  });
+
+  averageTicket = computed(() => {
+    const sales = this.todaySales().length;
+    return sales > 0 ? this.dailyRevenue() / sales : 0;
+  });
+
+  // 🎯 PRODUCTOS FRECUENTES (Top 6 más vendidos)
+  topProducts = computed(() => {
+    const productSales = new Map<string, number>();
+    
+    this.salesService.sales().forEach(sale => {
+      sale.items.forEach(item => {
+        const current = productSales.get(item.productId) || 0;
+        productSales.set(item.productId, current + item.quantity);
+      });
+    });
+
+    return this.products()
+      .map(p => ({
+        product: p,
+        sold: productSales.get(p.id) || 0
+      }))
+      .filter(p => p.sold > 0 && p.product.stock > 0)
+      .sort((a, b) => b.sold - a.sold)
+      .slice(0, 6)
+      .map(p => p.product);
+  });
+
+  // 🔄 ESTADO DE CONEXIÓN
+  isOnline = computed(() => this.offlineService.isOnline());
+  pendingSalesCount = computed(() => {
+    const pending = (this.offlineService as any).pendingSales?.() || [];
+    return Array.isArray(pending) ? pending.length : 0;
+  });
+
+  filteredProducts = computed(() => {
+    let filtered = this.products();
+
+    // Filtrar por categoría
+    if (this.selectedCategory()) {
+      filtered = filtered.filter(p => p.category === this.selectedCategory());
+    }
+
+    // Filtrar por búsqueda (nombre, categoría, marca, o código de barras)
+    if (this.searchQuery()) {
+      const query = this.searchQuery().toLowerCase().trim();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query) ||
+        p.brand?.toLowerCase().includes(query) ||
+        p.id.toLowerCase().includes(query) || // Búsqueda por ID
+        p.variants?.some(v => v.barcode?.toLowerCase().includes(query)) // Búsqueda por código de barras
+      );
+    }
+
+    // 🚀 OPTIMIZACIÓN: Limitar a 50 productos en vista inicial para renderizado rápido
+    // Si hay búsqueda o filtro, mostrar todos los resultados
+    const hasFilters = this.searchQuery() || this.selectedCategory();
+    return hasFilters ? filtered : filtered.slice(0, 50);
+  });
+
   // 🔥 BÚSQUEDA INTELIGENTE CON CÓDIGO DE BARRAS
   onSearchChange(event: Event) {
-    const query = (event.target as HTMLInputElement).value;
-    this.productFacade.search(query);
+    const query = this.searchQuery();
     
-    // Si parece código de barras, intentar agregar automáticamente
+    // Si la búsqueda tiene formato de código de barras (números puros de 8+ dígitos)
     if (/^\d{8,}$/.test(query)) {
-      const match = this.productFacade.findByBarcode(query);
-      if (match) {
-        this.addToCartWithVariant(match.product, match.variant);
-        this.productFacade.search(''); // Limpiar
-        this.toastService.success(`${match.product.name} - ${match.variant.size} ${match.variant.color} agregado`);
+      // Buscar por código de barras exacto
+      const productByBarcode = this.products().find(p => 
+        p.variants?.some(v => v.barcode === query)
+      );
+      
+      if (productByBarcode) {
+        const variant = productByBarcode.variants?.find(v => v.barcode === query);
+        if (variant) {
+          // Agregar automáticamente al carrito
+          this.addToCartWithVariant(productByBarcode, variant);
+          this.searchQuery.set(''); // Limpiar búsqueda
+          this.toastService.success(`${productByBarcode.name} - ${variant.size} ${variant.color} agregado`);
+          return;
+        }
       }
     }
   }
+
+  subtotal = computed(() => this.total() / 1.18);
+  tax = computed(() => this.total() - this.subtotal());
+  total = computed(() => {
+    return this.cart().reduce((sum, item) => {
+      return sum + (item.product.price * item.quantity);
+    }, 0);
+  });
 
   // Métodos del carrito
   addToCart(product: Product) {
@@ -939,30 +1038,42 @@ export class PosPageComponent {
     // Si el producto tiene variantes, abrir selector
     if (product.variants && product.variants.length > 0) {
       this.selectedProductForVariant.set(product);
-      this.selectedVariant.set(product.variants[0]);
+      this.selectedVariant.set(product.variants[0]); // Pre-seleccionar la primera
       this.variantSelectorOpen.set(true);
       return;
     }
 
-    this.cartFacade.addItem(product);
-    this.toastService.success('Producto agregado');
+    // Si no tiene variantes, agregar directamente
+    this.addToCartWithVariant(product, undefined);
   }
 
   addToCartWithVariant(product: Product, variant?: ProductVariant) {
+    // Verificar stock de la variante específica si existe
     if (variant && variant.stock === 0) {
       this.toastService.error('Variante sin stock');
       return;
     }
 
-    const result = this.cartFacade.addItem(product, variant);
+    // Buscar si ya existe esta combinación exacta en el carrito
+    const existingItem = this.cart().find(item => 
+      item.product.id === product.id && 
+      item.variant?.id === variant?.id
+    );
     
-    if (!result.success) {
-      this.toastService.warning(result.message || 'No se pudo agregar');
-      return;
+    if (existingItem) {
+      const maxStock = variant ? variant.stock : product.stock;
+      if (existingItem.quantity >= maxStock) {
+        this.toastService.warning('Stock máximo alcanzado');
+        return;
+      }
+      this.updateQuantity(product.id, variant?.id, 1);
+    } else {
+      this.cart.update(cart => [...cart, { product, quantity: 1, variant }]);
+      const variantLabel = variant ? ` (${variant.size} - ${variant.color})` : '';
+      this.toastService.success(`Producto agregado${variantLabel}`);
     }
 
-    const variantLabel = variant ? ` (${variant.size} - ${variant.color})` : '';
-    this.toastService.success(`Producto agregado${variantLabel}`);
+    // Cerrar el selector
     this.variantSelectorOpen.set(false);
   }
 
@@ -980,78 +1091,151 @@ export class PosPageComponent {
   }
 
   updateQuantity(productId: string, variantId: string | undefined, change: number) {
-    const result = this.cartFacade.updateQuantity(productId, variantId, change);
-    if (!result.success) {
-      this.toastService.warning(result.message || 'No se pudo actualizar');
-    }
+    this.cart.update(cart => {
+      return cart.map(item => {
+        if (item.product.id === productId && item.variant?.id === variantId) {
+          const newQuantity = item.quantity + change;
+          
+          if (newQuantity <= 0) {
+            return item;
+          }
+          
+          // Verificar stock según si tiene variante o no
+          const maxStock = item.variant ? item.variant.stock : item.product.stock;
+          if (newQuantity > maxStock) {
+            this.toastService.warning('Stock insuficiente');
+            return item;
+          }
+          
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      });
+    });
   }
 
   removeFromCart(productId: string, variantId?: string) {
-    this.cartFacade.removeItem(productId, variantId);
+    this.cart.update(cart => cart.filter(item => 
+      !(item.product.id === productId && item.variant?.id === variantId)
+    ));
     this.toastService.info('Producto eliminado');
   }
 
   clearCart() {
     if (confirm('¿Estás seguro de vaciar el carrito?')) {
-      this.cartFacade.clear();
+      this.cart.set([]);
       this.toastService.info('Carrito vaciado');
     }
   }
 
   clearFilters() {
-    this.productFacade.clearFilters();
+    this.searchQuery.set('');
+    this.selectedCategory.set(null);
   }
 
   // 💳 PAGO RÁPIDO (un solo click)
   quickPayment(method: 'cash' | 'yape' | 'card') {
     if (this.cart().length === 0) return;
     
-    this.paymentFacade.setPaymentMethod(method);
+    this.paymentMethod = method === 'cash' ? 'Efectivo' : method === 'yape' ? 'Yape' : 'Tarjeta';
     this.checkout();
   }
 
   // Checkout
   checkout() {
     if (this.cart().length === 0) return;
+    
     this.showTicket.set(true);
   }
 
   onTicketClosed() {
+    // Crear y registrar la venta en el sistema
     this.completeSale();
     
+    // Limpiar estado
     this.showTicket.set(false);
-    this.cartFacade.clear();
-    this.paymentFacade.reset();
-    this.showClientForm.set(false);
-    this.clientName = '';
+    this.cart.set([]);
+    this.clientName = 'Cliente';
     this.clientPhone = '';
     this.paymentMethod = '';
     this.amountPaid = 0;
     this.discount = 0;
+    this.showClientForm.set(false);
+    this.currentTicketNumber++;
   }
 
   completeSale() {
     if (this.cart().length === 0) return;
 
-    const paymentMethodType = this.paymentFacade.getPaymentMethodType(this.paymentMethod);
-    this.paymentFacade.setPaymentMethod(paymentMethodType);
-    
-    if (this.clientName && this.clientName !== 'Cliente') {
-      this.paymentFacade.setCustomerData({
-        name: this.clientName,
-        phone: this.clientPhone || undefined
-      });
-    }
-    
-    if (this.discount > 0) {
-      this.paymentFacade.setDiscount(this.discount);
+    // Validar método de pago
+    if (!this.paymentMethod) {
+      this.toastService.warning('Selecciona un método de pago');
+      return;
     }
 
-    const sale = this.paymentFacade.processPayment(this.cart());
+    // Convertir items del carrito a SaleItems
+    const saleItems: SaleItem[] = this.cart().map(item => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      quantity: item.quantity,
+      size: item.product.sizes[0] || 'M',
+      color: item.product.colors?.[0],
+      unitPrice: item.product.price,
+      subtotal: item.product.price * item.quantity
+    }));
+
+    // Calcular totales
+    const subtotal = this.subtotal();
+    const tax = this.tax();
+    const total = this.total();
+
+    const saleData = {
+      items: saleItems,
+      subtotal: subtotal,
+      discount: this.discount,
+      tax: tax,
+      total: total - this.discount,
+      paymentMethod: this.getPaymentMethodType(),
+      status: 'completed' as const,
+      customer: this.clientName !== 'Cliente' ? {
+        id: `CLI-${Date.now()}`,
+        name: this.clientName,
+        phone: this.clientPhone || undefined,
+        totalPurchases: total,
+        tier: 'nuevo' as const
+      } : undefined,
+      notes: this.amountPaid > 0 ? `Pagó: S/ ${this.amountPaid}, Cambio: S/ ${this.amountPaid - total}` : undefined,
+      createdBy: this.authService.currentUser()?.name || 'Usuario POS',
+      vendedorId: this.authService.currentUser()?.id || 'user-1'
+    };
+
+    // 🔌 DETECCIÓN AUTOMÁTICA: Online vs Offline
     
-    if (sale) {
-      this.logger.log('Venta completada:', sale);
+    if (this.offlineService.isOnline()) {
+      // ✅ MODO ONLINE: Guardar normalmente
+      const sale = this.salesService.createSale(saleData);
+      if (sale) {
+        this.toastService.success(`Venta ${sale.saleNumber} registrada correctamente`);
+        this.logger.log('✅ Venta registrada (ONLINE):', sale);
+      }
+    } else {
+      // 📴 MODO OFFLINE: Guardar en IndexedDB
+      this.offlineService.saveSaleOffline(saleData);
+      this.toastService.warning('Venta guardada offline. Se sincronizará cuando vuelva internet');
+      this.logger.log('📴 Venta guardada (OFFLINE):', saleData);
     }
+
+    // ✅ El stock se reduce automáticamente en SalesService.createSale()
+  }
+
+  getPaymentMethodType(): Sale['paymentMethod'] {
+    const method = this.paymentMethod.toLowerCase();
+    if (method.includes('efectivo')) return 'cash';
+    if (method.includes('tarjeta')) return 'card';
+    if (method.includes('yape')) return 'yape';
+    if (method.includes('plin')) return 'plin';
+    if (method.includes('transfer')) return 'transfer';
+    return 'cash';
   }
 
   onTicketPrinted() {
@@ -1066,5 +1250,23 @@ export class PosPageComponent {
     }
     this.logger.log('Ticket enviado por WhatsApp');
     this.toastService.success('Ticket enviado por WhatsApp');
+  }
+
+  // Toast notifications
+  toast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') {
+    const icons = {
+      success: 'check_circle',
+      error: 'error',
+      warning: 'warning',
+      info: 'info'
+    };
+
+    this.toastMessage.set(message);
+    this.toastIcon.set(icons[type]);
+    this.showToast.set(true);
+
+    setTimeout(() => {
+      this.showToast.set(false);
+    }, 3000);
   }
 }
