@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject, HostListener, ViewChild, ElementRef, effect } from '@angular/core';
+import { Component, computed, signal, inject, HostListener, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UiTicketComponent } from '../../../shared/ui/ui-ticket/ui-ticket.component';
@@ -22,6 +22,7 @@ export interface CartItem {
   selector: 'app-pos',
   standalone: true,
   imports: [CommonModule, FormsModule, UiTicketComponent, UiSkeletonComponent, UiAnimatedDialogComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
   template: `
     <div class="relative flex flex-col md:flex-row h-[calc(100vh-2rem)] gap-3 md:gap-6 p-3 md:p-6 w-full">
       
@@ -853,15 +854,11 @@ export class PosPageComponent {
 
   // Constructor optimizado para carga rápida
   constructor() {
-    // Enfocar input de búsqueda solo después de que termine la carga
-    // para no interferir con el renderizado inicial
-    effect(() => {
-      if (!this.loading()) {
-        setTimeout(() => {
-          this.searchInput?.nativeElement?.focus();
-        }, 150);
-      }
-    });
+    // Enfocar input de búsqueda de forma más eficiente (sin effect)
+    // Solo una vez cuando el componente esté listo
+    setTimeout(() => {
+      this.searchInput?.nativeElement?.focus();
+    }, 200);
   }
 
   // 🔥 ATAJOS DE TECLADO PROFESIONALES
@@ -970,6 +967,7 @@ export class PosPageComponent {
     return Array.isArray(pending) ? pending.length : 0;
   });
 
+  // Optimizado: Memoización eficiente de productos filtrados
   filteredProducts = computed(() => {
     let filtered = this.products();
 
@@ -1020,13 +1018,19 @@ export class PosPageComponent {
     }
   }
 
-  subtotal = computed(() => this.total() / 1.18);
-  tax = computed(() => this.total() - this.subtotal());
+  // El precio del producto YA incluye IGV (18%)
+  // Total = suma de (precio × cantidad) - este es el precio final con IGV incluido
   total = computed(() => {
     return this.cart().reduce((sum, item) => {
       return sum + (item.product.price * item.quantity);
     }, 0);
   });
+  
+  // Subtotal = precio sin IGV (base imponible)
+  subtotal = computed(() => this.total() / 1.18);
+  
+  // IGV = 18% calculado sobre el subtotal
+  tax = computed(() => this.subtotal() * 0.18);
 
   // Métodos del carrito
   addToCart(product: Product) {
@@ -1093,31 +1097,48 @@ export class PosPageComponent {
   updateQuantity(productId: string, variantId: string | undefined, change: number) {
     this.cart.update(cart => {
       return cart.map(item => {
-        if (item.product.id === productId && item.variant?.id === variantId) {
-          const newQuantity = item.quantity + change;
-          
-          if (newQuantity <= 0) {
-            return item;
-          }
-          
-          // Verificar stock según si tiene variante o no
-          const maxStock = item.variant ? item.variant.stock : item.product.stock;
-          if (newQuantity > maxStock) {
-            this.toastService.warning('Stock insuficiente');
-            return item;
-          }
-          
-          return { ...item, quantity: newQuantity };
+        // Verificar si es el item correcto (producto + variante)
+        const isMatch = item.product.id === productId && 
+                       ((!variantId && !item.variant) || (item.variant?.id === variantId));
+        
+        if (!isMatch) return item;
+        
+        const newQuantity = item.quantity + change;
+        
+        if (newQuantity <= 0) {
+          return item;
         }
-        return item;
+        
+        // Verificar stock según si tiene variante o no
+        const maxStock = item.variant ? item.variant.stock : item.product.stock;
+        if (newQuantity > maxStock) {
+          this.toastService.warning('Stock insuficiente');
+          return item;
+        }
+        
+        return { ...item, quantity: newQuantity };
       });
     });
   }
 
   removeFromCart(productId: string, variantId?: string) {
-    this.cart.update(cart => cart.filter(item => 
-      !(item.product.id === productId && item.variant?.id === variantId)
-    ));
+    this.cart.update(cart => cart.filter(item => {
+      // Si el producto no coincide, mantenerlo
+      if (item.product.id !== productId) return true;
+      
+      // Si ambos tienen variante, deben coincidir para eliminar
+      if (variantId && item.variant?.id) {
+        return item.variant.id !== variantId;
+      }
+      
+      // Si ambos NO tienen variante, eliminar
+      if (!variantId && !item.variant) {
+        return false;
+      }
+      
+      // En cualquier otro caso, mantener
+      return true;
+    }));
     this.toastService.info('Producto eliminado');
   }
 
@@ -1178,10 +1199,11 @@ export class PosPageComponent {
       productId: item.product.id,
       productName: item.product.name,
       quantity: item.quantity,
-      size: item.product.sizes[0] || 'M',
-      color: item.product.colors?.[0],
+      size: item.variant?.size || item.product.sizes[0] || 'M',
+      color: item.variant?.color || item.product.colors?.[0],
       unitPrice: item.product.price,
-      subtotal: item.product.price * item.quantity
+      subtotal: item.product.price * item.quantity,
+      variantId: item.variant?.id // Incluir ID de variante si existe
     }));
 
     // Calcular totales

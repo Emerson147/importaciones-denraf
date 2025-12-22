@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProductService } from '../../../core/services/product.service';
 import { ProductVariant } from '../../../core/models';
@@ -20,7 +20,8 @@ import {
     UiLabelComponent
   ],
   templateUrl: './productos-page.component.html',
-  styleUrls: ['./productos-page.component.css']
+  styleUrls: ['./productos-page.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush // 🚀 Optimización de Change Detection
 })
 export class ProductosPageComponent {
   private productService = inject(ProductService);

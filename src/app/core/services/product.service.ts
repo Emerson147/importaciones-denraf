@@ -28,53 +28,91 @@ export class ProductService {
   isLoading = signal(true);
   isSyncing = signal(false);
   lastSyncTime = signal<Date | null>(null);
+  
+  // 🎯 Control de inicialización única
+  private initialized = false;
+  private readonly SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 
   constructor() {
-    // 🚀 Nueva estrategia: Supabase First + Cache Inteligente
-    this.initSupabaseFirst();
+    // 🚀 Inicialización optimizada: solo una vez
+    if (!this.initialized) {
+      this.initialized = true;
+      this.initStaleWhileRevalidate();
+    }
   }
 
   /**
-   * 🚀 Estrategia Supabase-First con Cache Inteligente
+   * 🚀 Estrategia Stale-While-Revalidate
    * 
-   * 1. Muestra cache de IndexedDB INMEDIATAMENTE (0ms)
-   * 2. Carga desde Supabase EN PARALELO (fuente de verdad)
-   * 3. Actualiza UI con datos frescos de Supabase
-   * 4. Guarda en IndexedDB para próxima vez
+   * 1. Muestra cache SIEMPRE primero (0ms - instantáneo)
+   * 2. Actualiza desde Supabase en BACKGROUND (no bloquea)
+   * 3. Solo sincroniza si han pasado 5+ minutos
+   * 4. Usuario NUNCA espera por Supabase
    */
-  private async initSupabaseFirst(): Promise<void> {
-    console.log('🚀 Iniciando carga Supabase-First...');
+  private async initStaleWhileRevalidate(): Promise<void> {
+    console.log('⚡ Iniciando Stale-While-Revalidate...');
 
-    // PASO 1: Mostrar cache INMEDIATAMENTE (sin bloquear)
-    this.showCacheIfAvailable();
+    // PASO 1: Cargar cache INMEDIATAMENTE
+    const hasCache = await this.loadFromCache();
 
-    // PASO 2: Cargar desde Supabase (fuente de verdad)
-    await this.loadFromSupabase();
+    // PASO 2: Actualizar desde Supabase SOLO si es necesario (background)
+    const shouldSync = this.shouldSyncWithSupabase();
+    if (shouldSync) {
+      console.log('🔄 Actualizando desde Supabase en background...');
+      this.loadFromSupabaseBackground();
+    } else {
+      console.log('✅ Cache reciente, no es necesario sincronizar');
+      this.isLoading.set(false);
+    }
   }
 
   /**
-   * Mostrar cache de IndexedDB inmediatamente (no bloquea)
-   * OPTIMIZADO: Promise no bloqueante para carga ultra rápida
+   * Cargar desde cache de IndexedDB (SIEMPRE primero)
+   * Retorna true si hay datos en cache
    */
-  private showCacheIfAvailable(): void {
-    // Ejecutar de forma asíncrona sin bloquear el flujo
-    this.localDb.getProducts().then(cachedProducts => {
+  private async loadFromCache(): Promise<boolean> {
+    try {
+      const cachedProducts = await this.localDb.getProducts();
+      
       if (cachedProducts && cachedProducts.length > 0) {
-        console.log(`⚡ Cache: ${cachedProducts.length} productos desde IndexedDB`);
+        console.log(`⚡ Cache: ${cachedProducts.length} productos cargados INSTANTÁNEAMENTE`);
         this.productsSignal.set(cachedProducts);
-        this.isLoading.set(false); // UI lista INMEDIATAMENTE
+        this.isLoading.set(false); // UI lista en < 50ms
+        return true;
       } else {
-        console.log('📄 No hay cache, esperando Supabase...');
+        console.log('📄 Sin cache, cargando desde Supabase...');
+        return false;
       }
-    }).catch(error => {
+    } catch (error) {
       console.warn('⚠️ Error leyendo cache:', error);
-    });
+      return false;
+    }
   }
 
   /**
-   * Cargar productos desde Supabase (fuente de verdad)
+   * Verificar si debemos sincronizar con Supabase
+   * Solo sincroniza si han pasado 5+ minutos desde última sync
    */
-  private async loadFromSupabase(): Promise<void> {
+  private shouldSyncWithSupabase(): boolean {
+    const lastSync = this.lastSyncTime();
+    if (!lastSync) return true; // Primera vez, sí sincronizar
+    
+    const timeSinceLastSync = Date.now() - lastSync.getTime();
+    return timeSinceLastSync > this.SYNC_INTERVAL_MS;
+  }
+
+  /**
+   * Cargar productos desde Supabase en BACKGROUND (no bloquea UI)
+   */
+  private loadFromSupabaseBackground(): void {
+    // Ejecutar en background sin bloquear
+    this.syncFromSupabase();
+  }
+
+  /**
+   * Sincronizar con Supabase (internal)
+   */
+  private async syncFromSupabase(): Promise<void> {
     if (!navigator.onLine) {
       console.log('📴 Sin conexión, usando solo cache');
       this.isLoading.set(false);
@@ -284,6 +322,17 @@ export class ProductService {
   // ✅ MÉTODOS PARA SINCRONIZACIÓN
 
   /**
+   * 🔄 Forzar sincronización manual con Supabase
+   * Útil cuando el usuario quiere actualizar datos manualmente
+   */
+  async forceSync(): Promise<void> {
+    console.log('🔄 Sincronización manual forzada...');
+    this.isSyncing.set(true);
+    await this.syncFromSupabase();
+    this.isSyncing.set(false);
+  }
+
+  /**
    * Obtener un producto por ID
    */
   getProductById(id: string): Product | undefined {
@@ -301,7 +350,7 @@ export class ProductService {
    * Actualizar stock de un producto
    * ⚠️ CRÍTICO: Este método se llama desde SalesService al registrar ventas
    */
-  updateStock(productId: string, quantityChange: number): boolean {
+  updateStock(productId: string, quantityChange: number, variantId?: string): boolean {
     return (
       this.errorHandler.handleSyncOperation(
         () => {
@@ -313,24 +362,64 @@ export class ProductService {
           }
 
           const product = products[index];
-          const newStock = product.stock + quantityChange;
+          let updatedProduct = { ...product };
 
-          // No permitir stock negativo
-          if (newStock < 0) {
-            throw new Error(
-              `Stock insuficiente para ${product.name}. Stock actual: ${
-                product.stock
-              }, requerido: ${Math.abs(quantityChange)}`
-            );
+          // Si se especifica variantId, actualizar stock de la variante
+          if (variantId && product.variants) {
+            const variantIndex = product.variants.findIndex(v => v.id === variantId);
+            
+            if (variantIndex === -1) {
+              throw new Error(`Variante no encontrada: ${variantId}`);
+            }
+
+            const variant = product.variants[variantIndex];
+            const newVariantStock = variant.stock + quantityChange;
+
+            // No permitir stock negativo en variante
+            if (newVariantStock < 0) {
+              throw new Error(
+                `Stock insuficiente para ${product.name} (${variant.size}/${variant.color}). Stock actual: ${
+                  variant.stock
+                }, requerido: ${Math.abs(quantityChange)}`
+              );
+            }
+
+            // Actualizar variante
+            const updatedVariants = [...product.variants];
+            updatedVariants[variantIndex] = {
+              ...variant,
+              stock: newVariantStock
+            };
+
+            updatedProduct = {
+              ...product,
+              variants: updatedVariants,
+              stock: updatedVariants.reduce((sum, v) => sum + v.stock, 0), // Recalcular stock total
+              updatedAt: new Date(),
+            };
+          } else {
+            // Actualizar stock del producto principal (sin variantes)
+            const newStock = product.stock + quantityChange;
+
+            // No permitir stock negativo
+            if (newStock < 0) {
+              throw new Error(
+                `Stock insuficiente para ${product.name}. Stock actual: ${
+                  product.stock
+                }, requerido: ${Math.abs(quantityChange)}`
+              );
+            }
+
+            updatedProduct = {
+              ...product,
+              stock: newStock,
+              updatedAt: new Date(),
+            };
           }
 
           // Actualizar el array inmutablemente
           const updatedProducts = [...products];
-          updatedProducts[index] = {
-            ...product,
-            stock: newStock,
-            updatedAt: new Date(),
-          };
+          updatedProducts[index] = updatedProduct;
 
           this.productsSignal.set(updatedProducts);
 
@@ -350,15 +439,15 @@ export class ProductService {
    * Reducir stock al registrar una venta
    * Llamado desde SalesService
    */
-  reduceStock(productId: string, quantity: number): boolean {
-    return this.updateStock(productId, -quantity);
+  reduceStock(productId: string, quantity: number, variantId?: string): boolean {
+    return this.updateStock(productId, -quantity, variantId);
   }
 
   /**
    * Aumentar stock al recibir inventario
    */
-  addStock(productId: string, quantity: number): boolean {
-    return this.updateStock(productId, quantity);
+  addStock(productId: string, quantity: number, variantId?: string): boolean {
+    return this.updateStock(productId, quantity, variantId);
   }
 
   /**

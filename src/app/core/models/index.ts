@@ -54,6 +54,7 @@ export interface SaleItem {
   color?: string;
   unitPrice: number;
   subtotal: number;
+  variantId?: string; // ID de la variante vendida (si aplica)
 }
 
 export interface Customer {

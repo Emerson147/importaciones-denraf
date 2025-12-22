@@ -29,51 +29,87 @@ export class SalesService {
   isLoading = signal(true);
   isSyncing = signal(false);
   lastSyncTime = signal<Date | null>(null);
+  
+  // 🎯 Control de inicialización única
+  private initialized = false;
+  private readonly SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 
   // Exponemos como readonly
   readonly sales = this.salesSignal.asReadonly();
   readonly allSales = this.sales; // Alias para compatibilidad
 
   constructor() {
-    this.initSupabaseFirst();
-  }
-
-  /**
-   * 🚀 Estrategia Supabase-First con Cache Inteligente
-   */
-  private async initSupabaseFirst(): Promise<void> {
-    console.log('🚀 [Sales] Iniciando carga Supabase-First...');
-
-    // PASO 1: Mostrar cache INMEDIATAMENTE
-    this.showCacheIfAvailable();
-
-    // PASO 2: Cargar desde Supabase
-    await this.loadFromSupabase();
-  }
-
-  /**
-   * Mostrar cache de IndexedDB inmediatamente
-   */
-  private async showCacheIfAvailable(): Promise<void> {
-    try {
-      const cachedSales = await this.localDb.getSales();
-      
-      if (cachedSales && cachedSales.length > 0) {
-        console.log(`⚡ Cache: ${cachedSales.length} ventas desde IndexedDB`);
-        this.salesSignal.set(cachedSales);
-        this.isLoading.set(false);
-      } else {
-        console.log('📄 No hay cache de ventas, esperando Supabase...');
-      }
-    } catch (error) {
-      console.warn('⚠️ Error leyendo cache de ventas:', error);
+    // 🚀 Inicialización optimizada: solo una vez
+    if (!this.initialized) {
+      this.initialized = true;
+      this.initStaleWhileRevalidate();
     }
   }
 
   /**
-   * Cargar ventas desde Supabase (fuente de verdad)
+   * 🚀 Estrategia Stale-While-Revalidate (igual que ProductService)
    */
-  private async loadFromSupabase(): Promise<void> {
+  private async initStaleWhileRevalidate(): Promise<void> {
+    console.log('⚡ [Sales] Iniciando Stale-While-Revalidate...');
+
+    // PASO 1: Cargar cache INMEDIATAMENTE
+    const hasCache = await this.loadFromCache();
+
+    // PASO 2: Actualizar desde Supabase SOLO si es necesario (background)
+    const shouldSync = this.shouldSyncWithSupabase();
+    if (shouldSync) {
+      console.log('🔄 [Sales] Actualizando desde Supabase en background...');
+      this.loadFromSupabaseBackground();
+    } else {
+      console.log('✅ [Sales] Cache reciente, no es necesario sincronizar');
+      this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Cargar desde cache de IndexedDB (SIEMPRE primero)
+   */
+  private async loadFromCache(): Promise<boolean> {
+    try {
+      const cachedSales = await this.localDb.getSales();
+      
+      if (cachedSales && cachedSales.length > 0) {
+        console.log(`⚡ [Sales] Cache: ${cachedSales.length} ventas cargadas INSTANTÁNEAMENTE`);
+        this.salesSignal.set(cachedSales);
+        this.isLoading.set(false);
+        return true;
+      } else {
+        console.log('📄 [Sales] Sin cache, cargando desde Supabase...');
+        return false;
+      }
+    } catch (error) {
+      console.warn('⚠️ [Sales] Error leyendo cache:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Verificar si debemos sincronizar con Supabase
+   */
+  private shouldSyncWithSupabase(): boolean {
+    const lastSync = this.lastSyncTime();
+    if (!lastSync) return true;
+    
+    const timeSinceLastSync = Date.now() - lastSync.getTime();
+    return timeSinceLastSync > this.SYNC_INTERVAL_MS;
+  }
+
+  /**
+   * Cargar desde Supabase en BACKGROUND
+   */
+  private loadFromSupabaseBackground(): void {
+    this.syncFromSupabase();
+  }
+
+  /**
+   * Sincronizar con Supabase (internal)
+   */
+  private async syncFromSupabase(): Promise<void> {
     if (!navigator.onLine) {
       console.log('📴 Sin conexión, usando solo cache');
       this.isLoading.set(false);
@@ -200,7 +236,7 @@ export class SalesService {
         // ⚡ SINCRONIZACIÓN AUTOMÁTICA: Reducir stock de cada producto vendido
         const failedItems: string[] = [];
         newSale.items.forEach((item) => {
-          const success = this.productService.reduceStock(item.productId, item.quantity);
+          const success = this.productService.reduceStock(item.productId, item.quantity, item.variantId);
           if (!success) {
             failedItems.push(item.productName);
           }
@@ -249,6 +285,16 @@ export class SalesService {
       'Registro de venta',
       'No se pudo completar la venta'
     );
+  }
+
+  /**
+   * 🔄 Forzar sincronización manual con Supabase
+   */
+  async forceSync(): Promise<void> {
+    console.log('🔄 [Sales] Sincronización manual forzada...');
+    this.isSyncing.set(true);
+    await this.syncFromSupabase();
+    this.isSyncing.set(false);
   }
 
   // Obtener venta por ID
