@@ -2,29 +2,163 @@
   class="min-h-screen bg-stone-50 dark:bg-stone-950 p-4 sm:p-6 lg:p-8 transition-colors duration-100"
 >
   <div class="max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
-    <!-- Header con Export Button -->
-    <div class="flex items-center justify-between">
+    <!-- Header con Period Selector y Export Button -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <app-ui-page-header
         title="Dashboard"
         subtitle="DenRaf • Inteligencia de Negocios"
         icon="📊"
       />
 
-      <!-- Botón Exportar -->
-      <app-ui-export-menu [data]="exportData()" type="sales" />
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <!-- Selector de Período -->
+        <app-period-selector 
+          class="flex-1 sm:flex-initial"
+          (periodChange)="onPeriodChange($event)"
+        />
+        
+        <!-- Botón Exportar -->
+        <app-ui-export-menu [data]="exportData()" type="sales" />
+      </div>
     </div>
 
-    <!-- Analytics KPIs (Nueva sección ejecutiva) -->
+    <!-- Analytics KPIs (Métricas Clave) -->
     <div class="space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-bold text-stone-800 dark:text-stone-200 uppercase tracking-wide">
-          Métricas Empresariales
+          Resumen Ejecutivo
         </h2>
-        <span class="text-xs text-stone-400 dark:text-stone-500">vs semana anterior</span>
+        <span class="text-xs text-stone-400 dark:text-stone-500">Hoy • Esta Semana</span>
       </div>
 
       @if (isLoading()) {
-        <!-- Skeleton Loading -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <app-ui-skeleton variant="card" [repeat]="4" />
+        </div>
+      } @else {
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <!-- Ventas de Hoy -->
+          <div
+            class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all"
+          >
+            <div class="flex items-start justify-between mb-4">
+              <div
+                class="h-10 w-10 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900 transition-colors duration-100"
+              >
+                <span class="material-icons-outlined text-lg">receipt_long</span>
+              </div>
+              <span
+                class="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-full"
+                >Hoy</span
+              >
+            </div>
+            <p
+              class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1"
+            >
+              Ventas
+            </p>
+            <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">
+              {{ todaySales().length }}
+            </p>
+            <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              S/ {{ todayRevenue() | number : '1.0-0' }} ingresos
+            </p>
+          </div>
+
+          <!-- Ingresos Semanales -->
+          <div
+            class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all"
+          >
+            <div class="flex items-start justify-between mb-4">
+              <div
+                class="h-10 w-10 rounded-xl bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center text-white transition-colors duration-100"
+              >
+                <span class="material-icons-outlined text-lg">attach_money</span>
+              </div>
+              <span
+                class="text-xs font-medium text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-800 px-2 py-1 rounded-full"
+                >Semana</span
+              >
+            </div>
+            <p
+              class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1"
+            >
+              Ingresos
+            </p>
+            <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">
+              S/ {{ weeklyRevenue() | number : '1.0-0' }}
+            </p>
+            <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              {{ weeklySales().length }} ventas
+            </p>
+          </div>
+
+          <!-- Ganancia Neta -->
+          <div
+            class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all"
+          >
+            <div class="flex items-start justify-between mb-4">
+              <div
+                class="h-10 w-10 rounded-xl bg-sky-500 dark:bg-sky-600 flex items-center justify-center text-white transition-colors duration-100"
+              >
+                <span class="material-icons-outlined text-lg">trending_up</span>
+              </div>
+              <span
+                class="text-xs font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/30 px-2 py-1 rounded-full"
+                >Neta</span
+              >
+            </div>
+            <p
+              class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1"
+            >
+              Ganancia
+            </p>
+            <p class="text-3xl font-bold text-sky-700 dark:text-sky-600">
+              S/ {{ weeklyNetProfit() | number : '1.0-0' }}
+            </p>
+            <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              Inversión: S/ {{ weeklyInvestment() | number : '1.0-0' }}
+            </p>
+          </div>
+
+          <!-- Mejor Día -->
+          <div
+            class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all"
+          >
+            <div class="flex items-start justify-between mb-4">
+              <div
+                class="h-10 w-10 rounded-xl bg-violet-500 dark:bg-violet-600 flex items-center justify-center text-white transition-colors duration-100"
+              >
+                <span class="material-icons-outlined text-lg">calendar_today</span>
+              </div>
+              <span
+                class="text-xs font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-1 rounded-full"
+                >Top</span
+              >
+            </div>
+            <p
+              class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1"
+            >
+              Mejor Día
+            </p>
+            <p class="text-2xl font-bold text-stone-900 dark:text-stone-100">
+              {{ bestSalesDayData().day }}
+            </p>
+            <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              S/ {{ bestSalesDayData().revenue | number : '1.0-0' }}
+            </p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Métricas Empresariales -->
+    <div class="space-y-3">
+      <h2 class="text-sm font-bold text-stone-800 dark:text-stone-200 uppercase tracking-wide">
+        Análisis Avanzado
+      </h2>
+
+      @if (isLoading()) {
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <app-ui-skeleton variant="card" [repeat]="4" />
         </div>
@@ -32,175 +166,61 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <!-- Margen de Ganancia -->
           <app-ui-kpi-card
-            label="Margen de Ganancia"
-            subtitle="Rentabilidad neta"
+            label="Margen"
+            subtitle="Rentabilidad"
             [value]="profitMargin().current"
             format="1.1-1"
             suffix="%"
             icon="pie_chart"
             [trend]="profitMargin().trend"
             [change]="profitMargin().change"
-            description="Ganancia después de costos estimados"
+            description="Ganancia después de costos"
           />
 
           <!-- ROI -->
           <app-ui-kpi-card
-            label="ROI Mensual"
-            subtitle="Retorno de inversión"
+            label="ROI"
+            subtitle="Retorno"
             [value]="roi().current"
             format="1.0-0"
             suffix="%"
             icon="trending_up"
             [trend]="roi().trend"
             [change]="roi().change"
-            description="Retorno sobre la inversión del mes"
+            description="Retorno de inversión"
           />
 
           <!-- Ticket Promedio -->
           <app-ui-kpi-card
             label="Ticket Promedio"
-            subtitle="Por transacción"
+            subtitle="Por venta"
             [value]="averageTicket().current"
             format="1.2-2"
             prefix="S/"
             icon="receipt"
             [trend]="averageTicket().trend"
             [change]="averageTicket().change"
-            description="Valor promedio por venta"
+            description="Valor promedio"
           />
 
           <!-- Tasa de Conversión -->
           <app-ui-kpi-card
-            label="Tasa de Conversión"
-            subtitle="Ventas completadas"
+            label="Conversión"
+            subtitle="Efectividad"
             [value]="conversionRate().current"
             format="1.1-1"
             suffix="%"
             icon="check_circle"
             [trend]="conversionRate().trend"
             [change]="conversionRate().change"
-            description="Porcentaje de ventas exitosas"
+            description="Ventas completadas"
           />
         </div>
       }
     </div>
 
-    <!-- KPIs Operacionales -->
-    <div class="space-y-3">
-      <h2 class="text-sm font-bold text-stone-800 dark:text-stone-200 uppercase tracking-wide">
-        Operaciones Diarias
-      </h2>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <!-- Ventas de Hoy -->
-        <div
-          class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all"
-        >
-          <div class="flex items-start justify-between mb-4">
-            <div
-              class="h-10 w-10 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900 transition-colors duration-100"
-            >
-              <span class="material-icons-outlined text-lg">receipt_long</span>
-            </div>
-            <span
-              class="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-full"
-              >Hoy</span
-            >
-          </div>
-          <p
-            class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1"
-          >
-            Ventas de Hoy
-          </p>
-          <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">
-            {{ todaySales().length }}
-          </p>
-          <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
-            S/ {{ todayRevenue() | number : '1.2-2' }} en ingresos
-          </p>
-        </div>
-
-        <!-- Ingresos Totales -->
-        <div
-          class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all"
-        >
-          <div class="flex items-start justify-between mb-4">
-            <div
-              class="h-10 w-10 rounded-xl bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center text-white transition-colors duration-100"
-            >
-              <span class="material-icons-outlined text-lg">attach_money</span>
-            </div>
-            <span
-              class="text-xs font-medium text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-800 px-2 py-1 rounded-full"
-              >Semanal</span
-            >
-          </div>
-          <p
-            class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1"
-          >
-            Ingresos Semanales
-          </p>
-          <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">
-            S/ {{ weeklyRevenue() | number : '1.0-0' }}
-          </p>
-          <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
-            {{ weeklySales().length }} ventas esta semana
-          </p>
-        </div>
-
-        <!-- Pendientes -->
-        <div
-          class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all"
-        >
-          <div class="flex items-start justify-between mb-4">
-            <div
-              class="h-10 w-10 rounded-xl bg-amber-500 dark:bg-amber-600 flex items-center justify-center text-white transition-colors duration-100"
-            >
-              <span class="material-icons-outlined text-lg">schedule</span>
-            </div>
-            <span
-              class="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-full"
-              >Acción</span
-            >
-          </div>
-          <p
-            class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1"
-          >
-            Pagos Pendientes
-          </p>
-          <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">{{ pendingSales() }}</p>
-          <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">Requieren seguimiento</p>
-        </div>
-
-        <!-- Stock Bajo -->
-        <div
-          class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all"
-        >
-          <div class="flex items-start justify-between mb-4">
-            <div
-              class="h-10 w-10 rounded-xl bg-rose-500 dark:bg-rose-600 flex items-center justify-center text-white transition-colors duration-100"
-            >
-              <span class="material-icons-outlined text-lg">inventory</span>
-            </div>
-            <span
-              class="text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-full"
-              >¡Alerta!</span
-            >
-          </div>
-          <p
-            class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1"
-          >
-            Stock Bajo
-          </p>
-          <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">
-            {{ lowStockProducts().length }}
-          </p>
-          <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">Productos por reabastecer</p>
-        </div>
-      </div>
-
-      <!-- Charts & Top Products Row -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Charts & Top Products Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Comparativa Semanal (2/3) -->
         <div
           class="lg:col-span-2 bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100"
@@ -307,24 +327,25 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Actividad Reciente (2/3) -->
         <div
-          class="lg:col-span-2 bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden"
+          class="lg:col-span-2 bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden transition-colors duration-100"
         >
-          <div class="p-6 border-b border-stone-50 flex items-center justify-between">
+          <div class="p-4 sm:p-6 border-b border-stone-50 dark:border-stone-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h2 class="text-lg font-bold text-stone-800">Actividad Reciente</h2>
-              <p class="text-xs text-stone-400 mt-0.5">Últimas transacciones</p>
+              <h2 class="text-lg font-bold text-stone-800 dark:text-stone-200">Actividad Reciente</h2>
+              <p class="text-xs text-stone-400 dark:text-stone-500 mt-0.5">Últimas transacciones</p>
             </div>
             <app-ui-input
               placeholder="Buscar..."
-              class="max-w-xs bg-stone-50 border-transparent rounded-xl"
+              class="w-full sm:max-w-xs bg-stone-50 dark:bg-stone-800 border-transparent rounded-xl"
               (valueChange)="searchQuery.set($event)"
             ></app-ui-input>
           </div>
 
-          <div class="overflow-x-auto">
+          <!-- Tabla Desktop -->
+          <div class="hidden sm:block overflow-x-auto">
             <table class="w-full text-sm">
               <thead
-                class="bg-stone-50/50 text-xs uppercase tracking-wider text-stone-400 font-medium"
+                class="bg-stone-50/50 dark:bg-stone-800/50 text-xs uppercase tracking-wider text-stone-400 dark:text-stone-500 font-medium"
               >
                 <tr>
                   <th class="h-10 px-6 text-left font-medium">Producto</th>
@@ -333,9 +354,9 @@
                   <th class="h-10 px-6 text-right font-medium">Monto</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-stone-50">
+              <tbody class="divide-y divide-stone-50 dark:divide-stone-800">
                 @for (sale of todaySales().slice(0, 5); track sale.saleNumber) {
-                <tr class="hover:bg-stone-50/80 transition-colors">
+                <tr class="hover:bg-stone-50/80 dark:hover:bg-stone-800/50 transition-colors">
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                       <div
@@ -351,16 +372,16 @@
                       </div>
                     </div>
                   </td>
-                  <td class="px-6 py-4 text-stone-600">
+                  <td class="px-6 py-4 text-stone-600 dark:text-stone-400">
                     {{ sale.customer?.name || 'Cliente general' }}
                   </td>
                   <td class="px-6 py-4">
                     <span
                       class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold"
                       [ngClass]="{
-                        'bg-emerald-50 text-emerald-700': sale.status === 'completed',
-                        'bg-amber-50 text-amber-700': sale.status === 'pending',
-                        'bg-rose-50 text-rose-700': sale.status === 'cancelled'
+                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': sale.status === 'completed',
+                        'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': sale.status === 'pending',
+                        'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400': sale.status === 'cancelled'
                       }"
                     >
                       {{
@@ -372,13 +393,13 @@
                       }}
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-right font-bold text-stone-900">
+                  <td class="px-6 py-4 text-right font-bold text-stone-900 dark:text-stone-100">
                     S/ {{ sale.total | number : '1.2-2' }}
                   </td>
                 </tr>
                 } @if (todaySales().length === 0) {
                 <tr>
-                  <td colspan="4" class="px-6 py-8 text-center text-stone-400">
+                  <td colspan="4" class="px-6 py-8 text-center text-stone-400 dark:text-stone-500">
                     <span class="material-icons-outlined text-4xl mb-2 block">receipt_long</span>
                     <p class="text-sm">No hay ventas registradas hoy</p>
                   </td>
@@ -387,33 +408,87 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Vista Mobile (Cards) -->
+          <div class="sm:hidden divide-y divide-stone-100 dark:divide-stone-800">
+            @for (sale of todaySales().slice(0, 5); track sale.saleNumber) {
+            <div class="p-4 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors active:bg-stone-100 dark:active:bg-stone-800">
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <div
+                    class="h-10 w-10 rounded-lg bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 dark:text-stone-400 shrink-0"
+                  >
+                    <span class="material-icons-outlined text-lg">checkroom</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-stone-800 dark:text-stone-200 truncate text-sm">
+                      {{ sale.items?.[0]?.productName || sale.items?.[0]?.productId || 'Varios productos' }}
+                    </p>
+                    <p class="text-xs text-stone-500 dark:text-stone-400">
+                      {{ sale.customer?.name || 'Cliente general' }}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold shrink-0 ml-2"
+                  [ngClass]="{
+                    'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': sale.status === 'completed',
+                    'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': sale.status === 'pending',
+                    'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400': sale.status === 'cancelled'
+                  }"
+                >
+                  {{
+                    sale.status === 'completed'
+                      ? 'OK'
+                      : sale.status === 'pending'
+                      ? 'Pend.'
+                      : 'Canc.'
+                  }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <p class="text-xs text-stone-400 dark:text-stone-500">
+                  {{ sale.items?.length || 0 }} item(s)
+                </p>
+                <p class="text-base font-bold text-stone-900 dark:text-stone-100">
+                  S/ {{ sale.total | number : '1.2-2' }}
+                </p>
+              </div>
+            </div>
+            } @if (todaySales().length === 0) {
+            <div class="p-8 text-center text-stone-400 dark:text-stone-500">
+              <span class="material-icons-outlined text-4xl mb-2 block">receipt_long</span>
+              <p class="text-sm">No hay ventas registradas hoy</p>
+            </div>
+            }
+          </div>
         </div>
 
         <!-- Stock Bajo (1/3) -->
-        <div class="bg-white rounded-2xl border border-stone-100 shadow-sm p-6">
+        <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-4 sm:p-6 transition-colors duration-100">
           <div class="flex items-center justify-between mb-4">
             <div>
-              <h2 class="text-lg font-bold text-stone-800">Stock Bajo</h2>
-              <p class="text-xs text-stone-400 mt-0.5">Reabastecer pronto</p>
+              <h2 class="text-lg font-bold text-stone-800 dark:text-stone-200">Stock Bajo</h2>
+              <p class="text-xs text-stone-400 dark:text-stone-500 mt-0.5">Reabastecer pronto</p>
             </div>
-            <span class="material-icons-outlined text-rose-500">warning</span>
+            <span class="material-icons-outlined text-rose-500 dark:text-rose-400">warning</span>
           </div>
 
           <div class="space-y-3">
             @for (item of lowStockProducts(); track item.name) {
-            <div class="p-3 rounded-xl border border-rose-100 bg-rose-50/30">
+            <div class="p-3 rounded-xl border border-rose-100 dark:border-rose-900/30 bg-rose-50/30 dark:bg-rose-900/10 transition-colors duration-100">
               <div class="flex items-start justify-between mb-2">
-                <p class="text-sm font-semibold text-stone-800">{{ item.name }}</p>
-                <span class="text-xs font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full">
+                <p class="text-sm font-semibold text-stone-800 dark:text-stone-200">{{ item.name }}</p>
+                <span class="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/50 px-2 py-0.5 rounded-full">
                   {{ item.stock }} un.
                 </span>
               </div>
-              <p class="text-xs text-stone-500">{{ item.category }}</p>
+              <p class="text-xs text-stone-500 dark:text-stone-400">{{ item.category }}</p>
             </div>
             }
           </div>
 
-          <app-ui-button class="w-full mt-4 bg-stone-900 hover:bg-black text-white rounded-xl">
+          <app-ui-button class="w-full mt-4 bg-stone-900 dark:bg-stone-100 hover:bg-black dark:hover:bg-white text-white dark:text-stone-900 rounded-xl min-h-[44px] touch-manipulation transition-colors duration-100">
             Gestionar Inventario
           </app-ui-button>
         </div>
@@ -532,4 +607,3 @@
       </div>
     </div>
   </div>
-</div>

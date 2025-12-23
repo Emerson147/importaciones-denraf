@@ -1,0 +1,342 @@
+<div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-6 md:p-8 transition-colors duration-100">
+  <div class="max-w-[1600px] mx-auto space-y-6">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="text-4xl">�</div>
+        <div>
+          <h1 class="text-3xl font-serif font-bold text-stone-800 dark:text-stone-100">Compras</h1>
+          <p class="text-sm text-stone-500 dark:text-stone-400">Control de compras y ajustes de inventario</p>
+        </div>
+      </div>
+      <button
+        (click)="openNewMovementDialog()"
+        class="rounded-xl bg-stone-900 dark:bg-stone-100 hover:bg-black dark:hover:bg-stone-200 text-white dark:text-stone-900 px-6 py-2.5 shadow-lg font-medium transition-colors duration-100 flex items-center gap-2"
+      >
+        <span class="material-icons-outlined text-sm">add</span>
+        Registrar Compra
+      </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white dark:bg-stone-900 rounded-2xl p-6 border border-stone-100 dark:border-stone-800 shadow-sm transition-colors duration-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Entradas Hoy</p>
+            <p class="text-3xl font-bold text-emerald-700 dark:text-emerald-600 mt-2">{{ todayEntradas() }}</p>
+          </div>
+          <div class="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center">
+            <span class="material-icons-outlined text-2xl text-emerald-700 dark:text-emerald-600">arrow_downward</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-stone-900 rounded-2xl p-6 border border-stone-100 dark:border-stone-800 shadow-sm transition-colors duration-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-stone-500 dark:text-stone-400">Ajustes Hoy</p>
+            <p class="text-3xl font-bold text-sky-700 dark:text-sky-600 mt-2">{{ todayAjustes() }}</p>
+          </div>
+          <div class="w-14 h-14 rounded-xl bg-sky-50 dark:bg-sky-950/20 flex items-center justify-center">
+            <span class="material-icons-outlined text-2xl text-sky-700 dark:text-sky-600">tune</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros y búsqueda -->
+    <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm overflow-hidden transition-colors duration-100">
+      <div class="p-6 border-b border-stone-50 dark:border-stone-800 flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Search -->
+        <div class="flex items-center gap-4 flex-1 w-full md:w-auto">
+          <div class="relative flex-1 max-w-md">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 material-icons-outlined text-stone-400 dark:text-stone-500 text-lg">search</span>
+            <input
+              type="text"
+              [(ngModel)]="searchQuery"
+              placeholder="Buscar producto o número..."
+              class="w-full pl-10 pr-4 py-2.5 bg-stone-50 dark:bg-stone-950 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-300 dark:focus:ring-stone-600 text-sm text-stone-900 dark:text-stone-100 transition-colors duration-100"
+            />
+          </div>
+          
+          <div class="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
+            <span class="material-icons-outlined text-sm">filter_list</span>
+            <span>{{ filteredMovements().length }} compras</span>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-2">
+          <button
+            (click)="selectedTab.set('all')"
+            [class.bg-stone-900]="selectedTab() === 'all'"
+            [class.dark:bg-stone-100]="selectedTab() === 'all'"
+            [class.text-white]="selectedTab() === 'all'"
+            [class.dark:text-stone-900]="selectedTab() === 'all'"
+            [class.bg-stone-100]="selectedTab() !== 'all'"
+            [class.dark:bg-stone-800]="selectedTab() !== 'all'"
+            [class.text-stone-600]="selectedTab() !== 'all'"
+            [class.dark:text-stone-300]="selectedTab() !== 'all'"
+            class="px-4 py-2 rounded-xl text-sm font-medium transition-colors duration-100"
+          >
+            Todos
+          </button>
+          <button
+            (click)="selectedTab.set('entradas')"
+            [class.bg-emerald-700]="selectedTab() === 'entradas'"
+            [class.dark:bg-emerald-600]="selectedTab() === 'entradas'"
+            [class.text-white]="selectedTab() === 'entradas'"
+            [class.bg-stone-100]="selectedTab() !== 'entradas'"
+            [class.dark:bg-stone-800]="selectedTab() !== 'entradas'"
+            [class.text-stone-600]="selectedTab() !== 'entradas'"
+            [class.dark:text-stone-300]="selectedTab() !== 'entradas'"
+            class="px-4 py-2 rounded-xl text-sm font-medium transition-colors duration-100"
+          >
+            Entradas
+          </button>
+          <button
+            (click)="selectedTab.set('ajustes')"
+            [class.bg-sky-700]="selectedTab() === 'ajustes'"
+            [class.dark:bg-sky-600]="selectedTab() === 'ajustes'"
+            [class.text-white]="selectedTab() === 'ajustes'"
+            [class.bg-stone-100]="selectedTab() !== 'ajustes'"
+            [class.dark:bg-stone-800]="selectedTab() !== 'ajustes'"
+            [class.text-stone-600]="selectedTab() !== 'ajustes'"
+            [class.dark:text-stone-300]="selectedTab() !== 'ajustes'"
+            class="px-4 py-2 rounded-xl text-sm font-medium transition-colors duration-100"
+          >
+            Ajustes
+          </button>
+        </div>
+      </div>
+
+      <!-- Movements List -->
+      @if (loading()) {
+        <div class="p-12 text-center">
+          <div class="w-12 h-12 border-4 border-stone-200 dark:border-stone-700 border-t-stone-900 dark:border-t-stone-100 rounded-full animate-spin mx-auto"></div>
+          <p class="text-stone-500 dark:text-stone-400 mt-4">Cargando compras...</p>
+        </div>
+      } @else if (filteredMovements().length === 0) {
+        <div class="p-12 text-center">
+          <span class="material-icons-outlined text-6xl text-stone-300 dark:text-stone-600">shopping_cart</span>
+          <p class="text-stone-500 dark:text-stone-400 mt-4">No hay compras registradas</p>
+          <button
+            (click)="openNewMovementDialog()"
+            class="mt-4 text-sm text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-stone-100 underline"
+          >
+            Registrar primera compra
+          </button>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-stone-50 dark:bg-stone-900/50 border-b border-stone-100 dark:border-stone-800">
+              <tr>
+                <th class="text-left px-6 py-4 text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Número</th>
+                <th class="text-left px-6 py-4 text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Tipo</th>
+                <th class="text-left px-6 py-4 text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Producto</th>
+                <th class="text-left px-6 py-4 text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Cantidad</th>
+                <th class="text-left px-6 py-4 text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Motivo</th>
+                <th class="text-left px-6 py-4 text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Fecha</th>
+                <th class="text-left px-6 py-4 text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">Usuario</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100 dark:divide-stone-800">
+              @for (movement of filteredMovements(); track movement.id) {
+                <tr class="hover:bg-stone-50 dark:hover:bg-stone-900/50 transition-colors duration-100">
+                  <td class="px-6 py-4">
+                    <span class="text-sm font-medium text-stone-900 dark:text-stone-100 font-mono">{{ movement.movementNumber }}</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span [class]="'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ' + getMovementColor(movement.type)">
+                      <span class="material-icons-outlined text-base">{{ getMovementIcon(movement.type) }}</span>
+                      {{ movement.type | titlecase }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div>
+                      <p class="text-sm font-medium text-stone-900 dark:text-stone-100">{{ movement.productName }}</p>
+                      @if (movement.size || movement.color) {
+                        <p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                          {{ movement.size }} @if (movement.color) { / {{ movement.color }} }
+                        </p>
+                      }
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span [class]="'text-sm font-bold ' + (movement.type === 'entrada' ? 'text-emerald-700 dark:text-emerald-600' : 'text-sky-700 dark:text-sky-600')">
+                      +{{ movement.quantity }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <p class="text-sm text-stone-600 dark:text-stone-300">{{ movement.reason }}</p>
+                    @if (movement.supplier) {
+                      <p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Proveedor: {{ movement.supplier }}</p>
+                    }
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm text-stone-500 dark:text-stone-400">{{ formatDate(movement.date) }}</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm text-stone-600 dark:text-stone-300">{{ movement.createdBy }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nueva Compra -->
+<app-ui-animated-dialog
+  [isOpen]="showNewMovementDialog()"
+  (isOpenChange)="showNewMovementDialog.set($event)"
+  title="Registrar Compra"
+>
+  <div class="space-y-6">
+    <!-- Tipo de Movimiento -->
+    <div>
+      <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-3">Tipo de Operación</label>
+      <div class="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          (click)="changeMovementType('entrada')"
+          [class.bg-emerald-700]="movementType() === 'entrada'"
+          [class.dark:bg-emerald-600]="movementType() === 'entrada'"
+          [class.text-white]="movementType() === 'entrada'"
+          [class.bg-stone-100]="movementType() !== 'entrada'"
+          [class.dark:bg-stone-800]="movementType() !== 'entrada'"
+          [class.text-stone-700]="movementType() !== 'entrada'"
+          [class.dark:text-stone-300]="movementType() !== 'entrada'"
+          class="p-4 rounded-xl transition-colors duration-100 flex flex-col items-center gap-2 border border-transparent hover:border-stone-300 dark:hover:border-stone-600"
+        >
+          <span class="material-icons-outlined text-2xl">arrow_downward</span>
+          <span class="text-sm font-medium">Entrada</span>
+        </button>
+        <button
+          type="button"
+          (click)="changeMovementType('ajuste')"
+          [class.bg-sky-700]="movementType() === 'ajuste'"
+          [class.dark:bg-sky-600]="movementType() === 'ajuste'"
+          [class.text-white]="movementType() === 'ajuste'"
+          [class.bg-stone-100]="movementType() !== 'ajuste'"
+          [class.dark:bg-stone-800]="movementType() !== 'ajuste'"
+          [class.text-stone-700]="movementType() !== 'ajuste'"
+          [class.dark:text-stone-300]="movementType() !== 'ajuste'"
+          class="p-4 rounded-xl transition-colors duration-100 flex flex-col items-center gap-2 border border-transparent hover:border-stone-300 dark:hover:border-stone-600"
+        >
+          <span class="material-icons-outlined text-2xl">tune</span>
+          <span class="text-sm font-medium">Ajuste</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Producto -->
+    <div>
+      <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Producto *</label>
+      <select
+        [(ngModel)]="selectedProductId"
+        class="w-full px-4 py-3 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 text-stone-900 dark:text-stone-100 transition-colors duration-100"
+      >
+        <option value="">Selecciona un producto</option>
+        @for (product of products(); track product.id) {
+          <option [value]="product.id">{{ product.name }} (Stock: {{ product.stock }})</option>
+        }
+      </select>
+    </div>
+
+    <!-- Cantidad -->
+    <div>
+      <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Cantidad *</label>
+      <input
+        type="number"
+        [(ngModel)]="quantity"
+        min="1"
+        class="w-full px-4 py-3 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 text-stone-900 dark:text-stone-100 transition-colors duration-100"
+      />
+    </div>
+
+    <!-- Motivo -->
+    <div>
+      <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Motivo *</label>
+      <input
+        type="text"
+        [(ngModel)]="reason"
+        placeholder="Ej: Compra a proveedor, Inventario físico, etc."
+        class="w-full px-4 py-3 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 text-stone-900 dark:text-stone-100 transition-colors duration-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
+      />
+    </div>
+
+    <!-- Campos específicos para Entrada -->
+    @if (movementType() === 'entrada') {
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Proveedor</label>
+          <input
+            type="text"
+            [(ngModel)]="supplier"
+            placeholder="Nombre del proveedor"
+            class="w-full px-4 py-3 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 text-stone-900 dark:text-stone-100 transition-colors duration-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Factura/Boleta</label>
+          <input
+            type="text"
+            [(ngModel)]="invoice"
+            placeholder="Número de documento"
+            class="w-full px-4 py-3 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 text-stone-900 dark:text-stone-100 transition-colors duration-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Costo Unitario</label>
+        <div class="relative">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-stone-500 dark:text-stone-400">S/</span>
+          <input
+            type="number"
+            [(ngModel)]="cost"
+            step="0.01"
+            min="0"
+            class="w-full pl-12 pr-4 py-3 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 text-stone-900 dark:text-stone-100 transition-colors duration-100"
+          />
+        </div>
+      </div>
+    }
+
+    <!-- Notas -->
+    <div>
+      <label class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-2">Notas Adicionales</label>
+      <textarea
+        [(ngModel)]="notes"
+        rows="3"
+        placeholder="Información adicional sobre el movimiento..."
+        class="w-full px-4 py-3 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 text-stone-900 dark:text-stone-100 resize-none transition-colors duration-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
+      ></textarea>
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex gap-3 pt-4">
+      <button
+        type="button"
+        (click)="closeDialog()"
+        class="flex-1 px-4 py-3 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors duration-100 font-medium"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        (click)="submitMovement()"
+        class="flex-1 px-4 py-3 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-xl hover:bg-black dark:hover:bg-stone-200 transition-colors duration-100 font-medium shadow-lg"
+      >
+        Registrar Compra
+      </button>
+    </div>
+  </div>
+</app-ui-animated-dialog>

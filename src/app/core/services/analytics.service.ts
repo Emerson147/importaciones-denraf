@@ -1,4 +1,4 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { SalesService } from './sales.service';
 import { Sale } from '../models';
 
@@ -45,11 +45,51 @@ export interface PeriodComparison {
 export class AnalyticsService {
   private salesService = inject(SalesService);
 
+  // 📅 Período seleccionado para filtrado dinámico
+  private selectedPeriod = signal<{ startDate: Date; endDate: Date } | null>(null);
+
+  /**
+   * Actualiza el período seleccionado para filtrar métricas
+   */
+  setPeriod(startDate: Date, endDate: Date) {
+    this.selectedPeriod.set({ startDate, endDate });
+  }
+
+  /**
+   * Limpia el filtro de período (volver a usar períodos por defecto)
+   */
+  clearPeriod() {
+    this.selectedPeriod.set(null);
+  }
+
+  /**
+   * Obtiene ventas filtradas por el período seleccionado o usa método por defecto
+   */
+  private getSalesForPeriod(defaultGetter: () => Sale[]): Sale[] {
+    const period = this.selectedPeriod();
+    if (!period) {
+      return defaultGetter();
+    }
+
+    return this.salesService.allSales().filter((sale) => {
+      const saleDate = new Date(sale.date);
+      return saleDate >= period.startDate && saleDate <= period.endDate;
+    });
+  }
+
+  /**
+   * Revenue semanal (para uso en AlertService)
+   */
+  weeklyRevenue = computed(() => {
+    const weeklySales = this.getCurrentWeekSales();
+    return weeklySales.reduce((sum, s) => sum + s.total, 0);
+  });
+
   // --- KPIs PRINCIPALES ---
 
   // Margen de Ganancia Promedio (asumiendo costo es 60% del precio de venta)
   profitMargin = computed<KpiMetric>(() => {
-    const currentWeek = this.getCurrentWeekSales();
+    const currentWeek = this.getSalesForPeriod(() => this.getCurrentWeekSales());
     const previousWeek = this.getPreviousWeekSales();
 
     const calculateMargin = (sales: Sale[]) => {
@@ -73,7 +113,7 @@ export class AnalyticsService {
 
   // ROI (Return on Investment) - Retorno sobre inversión
   roi = computed<KpiMetric>(() => {
-    const currentMonth = this.getCurrentMonthSales();
+    const currentMonth = this.getSalesForPeriod(() => this.getCurrentMonthSales());
     const previousMonth = this.getPreviousMonthSales();
 
     const calculateROI = (sales: Sale[]) => {
@@ -96,7 +136,7 @@ export class AnalyticsService {
 
   // Ticket Promedio
   averageTicket = computed<KpiMetric>(() => {
-    const currentWeek = this.getCurrentWeekSales();
+    const currentWeek = this.getSalesForPeriod(() => this.getCurrentWeekSales());
     const previousWeek = this.getPreviousWeekSales();
 
     const calculateAvg = (sales: Sale[]) => {
@@ -117,7 +157,7 @@ export class AnalyticsService {
 
   // Tasa de Conversión (ventas completadas vs totales)
   conversionRate = computed<KpiMetric>(() => {
-    const currentWeek = this.getCurrentWeekSales();
+    const currentWeek = this.getSalesForPeriod(() => this.getCurrentWeekSales());
     const previousWeek = this.getPreviousWeekSales();
 
     const calculateRate = (sales: Sale[]) => {
@@ -140,7 +180,7 @@ export class AnalyticsService {
   // --- ANÁLISIS DE RENTABILIDAD POR PRODUCTO ---
 
   topProfitableProducts = computed<ProductProfitability[]>(() => {
-    const allSales = this.salesService.allSales();
+    const allSales = this.getSalesForPeriod(() => this.salesService.allSales());
     const productMap = new Map<string, ProductProfitability>();
 
     allSales.forEach((sale) => {
@@ -181,22 +221,31 @@ export class AnalyticsService {
   // --- COMPARACIÓN DE PERÍODOS ---
 
   weekComparison = computed<PeriodComparison>(() => {
-    const current = this.getCurrentWeekSales();
+    const current = this.getSalesForPeriod(() => this.getCurrentWeekSales());
     const previous = this.getPreviousWeekSales();
 
     const currentRevenue = current.reduce((sum, s) => sum + s.total, 0);
     const previousRevenue = previous.reduce((sum, s) => sum + s.total, 0);
 
-    // Calcular datos diarios para los últimos 7 días
-    const days = 7;
-    const today = new Date();
+    // Calcular datos diarios
+    const period = this.selectedPeriod();
+    let days = 7;
+    let referenceDate = new Date();
+    
+    // Si hay período seleccionado, usar sus fechas
+    if (period) {
+      const diffTime = Math.abs(period.endDate.getTime() - period.startDate.getTime());
+      days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      referenceDate = period.endDate;
+    }
+
     const currentDailyData: number[] = [];
     const previousDailyData: number[] = [];
 
     for (let i = days - 1; i >= 0; i--) {
       // Día actual
-      const currentDate = new Date(today);
-      currentDate.setDate(today.getDate() - i);
+      const currentDate = new Date(referenceDate);
+      currentDate.setDate(referenceDate.getDate() - i);
       const currentDayStart = new Date(currentDate.setHours(0, 0, 0, 0));
       const currentDayEnd = new Date(currentDate.setHours(23, 59, 59, 999));
 
@@ -206,9 +255,9 @@ export class AnalyticsService {
       });
       currentDailyData.push(currentDaySales.reduce((sum, s) => sum + s.total, 0));
 
-      // Día anterior (hace 7 días)
-      const previousDate = new Date(today);
-      previousDate.setDate(today.getDate() - i - 7);
+      // Día anterior (hace X días según el período)
+      const previousDate = new Date(referenceDate);
+      previousDate.setDate(referenceDate.getDate() - i - days);
       const previousDayStart = new Date(previousDate.setHours(0, 0, 0, 0));
       const previousDayEnd = new Date(previousDate.setHours(23, 59, 59, 999));
 

@@ -7,12 +7,16 @@ import {
   UiPageHeaderComponent,
   UiKpiCardComponent,
   UiExportMenuComponent,
-  UiSkeletonComponent
+  UiSkeletonComponent,
+  PeriodSelectorComponent
 } from '../../shared/ui';
 import { ToastService } from '../../core/services/toast.service';
 import { SalesService } from '../../core/services/sales.service';
 import { AnalyticsService } from '../../core/services/analytics.service';
 import { ApexChartConfigService } from '../../core/services/apex-chart-config.service';
+import { InventoryMovementService } from '../../core/services/inventory-movement.service';
+import { AlertService } from '../../core/services/alert.service';
+import { Period } from '../../shared/ui/period-selector/period-selector.component';
 import { ApexOptions } from 'ng-apexcharts';
 
 // MODELO DE PRODUCTO (Inventario)
@@ -39,6 +43,7 @@ interface Product {
     UiKpiCardComponent,
     UiExportMenuComponent,
     UiSkeletonComponent,
+    PeriodSelectorComponent,
   ],
   templateUrl: './dashboard-page.component.html',
 })
@@ -47,6 +52,11 @@ export class DashboardPageComponent {
   private salesService = inject(SalesService);
   private analyticsService = inject(AnalyticsService);
   private apexConfigService = inject(ApexChartConfigService);
+  private inventoryMovementService = inject(InventoryMovementService);
+  private alertService = inject(AlertService);
+
+  // 📅 Filtro de período seleccionado
+  selectedPeriod = signal<Period | null>(null);
 
   // 🔄 Estado de carga
   isLoading = computed(() => this.salesService.isLoading());
@@ -111,11 +121,35 @@ export class DashboardPageComponent {
 
   // --- DATOS DEL DASHBOARD DESDE SALESSERVICE ---
   
-  // KPIs principales
-  todaySales = this.salesService.todaySales;
-  todayRevenue = this.salesService.todayRevenue;
-  weeklySales = this.salesService.weeklySales;
-  weeklyRevenue = this.salesService.weeklyRevenue;
+  // KPIs principales (dinámicos según período seleccionado)
+  todaySales = computed(() => {
+    const period = this.selectedPeriod();
+    if (!period) return this.salesService.todaySales();
+    
+    return this.salesService.allSales().filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate >= period.startDate && saleDate <= period.endDate;
+    });
+  });
+
+  todayRevenue = computed(() => {
+    return this.todaySales().reduce((sum, s) => sum + s.total, 0);
+  });
+
+  weeklySales = computed(() => {
+    const period = this.selectedPeriod();
+    if (!period) return this.salesService.weeklySales();
+    
+    return this.salesService.allSales().filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate >= period.startDate && saleDate <= period.endDate;
+    });
+  });
+
+  weeklyRevenue = computed(() => {
+    return this.weeklySales().reduce((sum, s) => sum + s.total, 0);
+  });
+
   monthlySales = this.salesService.monthlySales;
   monthlyRevenue = this.salesService.monthlyRevenue;
 
@@ -150,6 +184,61 @@ export class DashboardPageComponent {
 
   // Top productos desde ventas reales
   topProducts = this.salesService.topProducts;
+
+  // 💰 Métricas financieras desde inventario
+  todayInvestment = this.inventoryMovementService.todayInvestment;
+  weeklyInvestment = this.inventoryMovementService.weeklyInvestment;
+  monthlyInvestment = this.inventoryMovementService.monthlyInvestment;
+
+  // ✨ Ganancia neta (Ingresos - Inversión)
+  todayNetProfit = computed(() => this.todayRevenue() - this.todayInvestment());
+  weeklyNetProfit = computed(() => this.weeklyRevenue() - this.weeklyInvestment());
+  monthlyNetProfit = computed(() => this.monthlyRevenue() - this.monthlyInvestment());
+
+  // 📅 Mejor día de ventas (según período seleccionado o últimos 30 días)
+  bestSalesDayData = computed(() => {
+    const period = this.selectedPeriod();
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (period) {
+      startDate = period.startDate;
+      endDate = period.endDate;
+    } else {
+      endDate = new Date();
+      startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+    
+    const salesByDay = new Map<string, { revenue: number; count: number; date: Date }>();
+    
+    this.salesService.allSales()
+      .filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate >= startDate && saleDate <= endDate;
+      })
+      .forEach(sale => {
+        const dateKey = new Date(sale.date).toLocaleDateString('es-ES', { weekday: 'long' });
+        const existing = salesByDay.get(dateKey) || { revenue: 0, count: 0, date: new Date(sale.date) };
+        salesByDay.set(dateKey, {
+          revenue: existing.revenue + sale.total,
+          count: existing.count + 1,
+          date: existing.date
+        });
+      });
+
+    if (salesByDay.size === 0) {
+      return { day: 'N/A', revenue: 0, count: 0 };
+    }
+
+    const best = Array.from(salesByDay.entries())
+      .sort((a, b) => b[1].revenue - a[1].revenue)[0];
+    
+    return {
+      day: best[0].charAt(0).toUpperCase() + best[0].slice(1),
+      revenue: best[1].revenue,
+      count: best[1].count
+    };
+  });
 
   // Productos con stock bajo (simulado, pendiente ProductService)
   lowStockProducts = signal([
@@ -230,5 +319,15 @@ export class DashboardPageComponent {
     this.newProductPrice.set(0);
     this.newProductSizes.set(['M']); // Default 'M'
     this.newProductImage.set(null);
+  }
+
+  /**
+   * 📅 Maneja el cambio de período del selector
+   */
+  onPeriodChange(period: Period) {
+    this.selectedPeriod.set(period);
+    
+    // Actualizar el período en AnalyticsService para que todos los computed se recalculen
+    this.analyticsService.setPeriod(period.startDate, period.endDate);
   }
 }

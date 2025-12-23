@@ -34,6 +34,10 @@ export const routes: Routes = [
             loadComponent: () => import('./features/inventory/analisis-page/analisis-page.component').then(m => m.AnalisisPageComponent)
           },
           {
+            path: 'compras',
+            loadComponent: () => import('./features/inventory/inventory-movements/inventory-movements.component').then(m => m.InventoryMovementsComponent)
+          },
+          {
             path: '',
             redirectTo: 'productos',
             pathMatch: 'full'

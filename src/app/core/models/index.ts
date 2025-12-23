@@ -69,6 +69,40 @@ export interface Customer {
   preferences?: string[];
 }
 
+// ============================================
+// MOVIMIENTOS DE INVENTARIO
+// ============================================
+
+export interface InventoryMovement {
+  id: string;
+  movementNumber: string; // Ej: "MOV-001", "ENTRADA-001", "SALIDA-001"
+  type: 'entrada' | 'salida' | 'ajuste' | 'devolucion';
+  date: Date;
+  productId: string;
+  productName: string;
+  variantId?: string;
+  size?: string;
+  color?: string;
+  quantity: number;
+  reason: string; // Motivo del movimiento
+  reference?: string; // Número de venta, orden de compra, etc.
+  cost?: number; // Costo unitario (para entradas)
+  totalCost?: number; // Costo total
+  createdBy: string; // Usuario que registró el movimiento
+  notes?: string;
+  supplier?: string; // Proveedor (para entradas)
+  invoice?: string; // Número de factura/boleta
+}
+
+export interface StockAdjustment {
+  productId: string;
+  variantId?: string;
+  quantityBefore: number;
+  quantityAfter: number;
+  difference: number;
+  reason: string;
+}
+
 export interface DailySummary {
   date: Date;
   totalSales: number;
