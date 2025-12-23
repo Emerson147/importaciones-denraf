@@ -30,10 +30,26 @@ export class AnalisisPageComponent {
   reorderSuggestions = this.inventoryService.reorderSuggestions;
   productAnalytics = this.inventoryService.productAnalytics;
   
+  // 🆕 Métricas de modelo de feria
+  capitalHealth = this.inventoryService.capitalHealth;
+  basicProducts = this.inventoryService.basicProducts;
+  frozenProducts = this.inventoryService.frozenProducts;
+  liquidationSuggestions = this.inventoryService.liquidationSuggestions;
+  productsToReorder = this.inventoryService.productsToReorder;
+  productClassifications = this.inventoryService.productClassifications;
+  
   // Computed para alertas de alta prioridad
   highPriorityAlertsCount = computed(() => 
     this.stockAlerts().filter(alert => alert.priority === 'high').length
   );
+  
+  // Fecha actual formateada
+  currentDate = computed(() => {
+    const today = new Date();
+    const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return `${days[today.getDay()]} ${today.getDate()} ${months[today.getMonth()]}`;
+  });
   
   // Propiedades para acceder a funciones globales en el template
   readonly Infinity = Infinity;

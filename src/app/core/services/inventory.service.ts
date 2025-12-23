@@ -1,7 +1,7 @@
 import { Injectable, computed, signal, inject } from '@angular/core';
 import { SalesService } from './sales.service';
 import { ProductService } from './product.service';
-import { Product, SaleItem } from '../models';
+import { Product, SaleItem, CapitalHealth, ProductClassification, LiquidationSuggestion } from '../models';
 
 export interface ProductAnalysis {
   product: Product;
@@ -45,6 +45,11 @@ export class InventoryService {
   private readonly LOW_THRESHOLD = 10;
   private readonly OVERSTOCK_MULTIPLIER = 3;
   private readonly ANALYSIS_DAYS = 30;
+  
+  // 🆕 Umbrales para modelo de feria
+  private readonly DAYS_PER_FAIR = 3.5; // Promedio: 2 ferias por semana
+  private readonly FAIRS_FROZEN_THRESHOLD = 8; // >8 ferias = congelado
+  private readonly FAIRS_SLOW_THRESHOLD = 4; // 4-8 ferias = lento
 
   /**
    * Análisis completo de cada producto
@@ -283,4 +288,233 @@ export class InventoryService {
       totalValue: items.reduce((sum, p) => sum + p.cost * p.stock, 0),
     }));
   });
+
+  // ============================================
+  // 🆕 MÉTRICAS PARA MODELO DE FERIA
+  // ============================================
+
+  /**
+   * Salud del capital: Activo, Lento, Congelado
+   */
+  capitalHealth = computed<CapitalHealth>(() => {
+    const products = this.productService.products();
+    const sales = this.salesService.sales();
+    const today = new Date();
+
+    let totalInvested = 0;
+    let activeCapital = 0;
+    let slowCapital = 0;
+    let frozenCapital = 0;
+
+    products.forEach((product: any) => {
+      const productCost = product.cost * product.stock;
+      totalInvested += productCost;
+
+      // Encontrar última venta de este producto
+      let lastSaleDate: Date | null = null;
+      sales.forEach((sale) => {
+        (sale.items || []).forEach((item) => {
+          if (item.productId === product.id) {
+            const saleDate = new Date(sale.date);
+            if (!lastSaleDate || saleDate > lastSaleDate) {
+              lastSaleDate = saleDate;
+            }
+          }
+        });
+      });
+
+      // Clasificar según días desde última venta
+      if (lastSaleDate) {
+        const lastDate: Date = lastSaleDate;
+        const daysSinceLastSale = Math.floor(
+          (today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        if (daysSinceLastSale <= 30) {
+          activeCapital += productCost; // Menos de 1 mes
+        } else if (daysSinceLastSale <= 60) {
+          slowCapital += productCost; // 1-2 meses
+        } else {
+          frozenCapital += productCost; // Más de 2 meses
+        }
+      } else {
+        // Si nunca se ha vendido, clasificar según fecha de creación
+        const daysSinceCreation = Math.floor(
+          (today.getTime() - new Date(product.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        if (daysSinceCreation > 60) {
+          frozenCapital += productCost;
+        } else if (daysSinceCreation > 30) {
+          slowCapital += productCost;
+        } else {
+          activeCapital += productCost;
+        }
+      }
+    });
+
+    const liquidityRatio = totalInvested > 0 ? (frozenCapital / totalInvested) * 100 : 0;
+    const targetLiberation = frozenCapital * 0.5; // Meta: liberar 50% del capital congelado
+
+    return {
+      totalInvested,
+      activeCapital,
+      slowCapital,
+      frozenCapital,
+      liquidityRatio,
+      targetLiberation,
+    };
+  });
+
+  /**
+   * Clasificación de productos: Básico, Variedad, Estancado
+   */
+  productClassifications = computed<ProductClassification[]>(() => {
+    const products = this.productService.products();
+    const sales = this.salesService.sales();
+    const today = new Date();
+
+    return products.map((product: any) => {
+      // Calcular ventas en último mes
+      const lastMonthDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      let totalSoldLastMonth = 0;
+      let lastSaleDate: Date | null = null;
+
+      sales.forEach((sale) => {
+        const saleDate = new Date(sale.date);
+        (sale.items || []).forEach((item) => {
+          if (item.productId === product.id) {
+            if (saleDate >= lastMonthDate) {
+              totalSoldLastMonth += item.quantity;
+            }
+            if (!lastSaleDate || saleDate > lastSaleDate) {
+              lastSaleDate = saleDate;
+            }
+          }
+        });
+      });
+
+      // Calcular días y ferias desde última venta
+      let daysSinceLastSale: number;
+      if (lastSaleDate) {
+        const lastDate: Date = lastSaleDate;
+        daysSinceLastSale = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+      } else {
+        daysSinceLastSale = Math.floor((today.getTime() - new Date(product.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+      }
+
+      const fairsSinceLastSale = Math.floor(daysSinceLastSale / this.DAYS_PER_FAIR);
+
+      // Rotación por feria (asumiendo 8 ferias en 30 días)
+      const rotationPerFair = totalSoldLastMonth / 8;
+
+      // Clasificación automática
+      let classification: ProductClassification['classification'];
+      let shouldReorder = false;
+      let shouldLiquidate = false;
+
+      if (fairsSinceLastSale >= this.FAIRS_FROZEN_THRESHOLD) {
+        // Más de 8 ferias sin vender = ESTANCADO
+        classification = 'estancado';
+        shouldLiquidate = true;
+      } else if (rotationPerFair >= 2) {
+        // Alta rotación (2+ por feria) = BÁSICO
+        classification = 'basico';
+        shouldReorder = product.stock < 10;
+      } else if (rotationPerFair >= 0.5) {
+        // Rotación media = VARIEDAD
+        classification = 'variedad';
+        shouldReorder = false; // No reordenar variedad automáticamente
+      } else {
+        // Baja rotación pero reciente = VARIEDAD
+        classification = 'variedad';
+        shouldLiquidate = fairsSinceLastSale >= this.FAIRS_SLOW_THRESHOLD;
+      }
+
+      return {
+        product,
+        classification,
+        fairsSinceLastSale,
+        daysSinceLastSale,
+        totalSoldLastMonth,
+        rotationPerFair,
+        shouldReorder,
+        shouldLiquidate,
+      };
+    });
+  });
+
+  /**
+   * Productos básicos (alta rotación, siempre recomprar)
+   */
+  basicProducts = computed(() => {
+    return this.productClassifications()
+      .filter((c) => c.classification === 'basico')
+      .sort((a, b) => b.rotationPerFair - a.rotationPerFair);
+  });
+
+  /**
+   * Productos estancados (>8 ferias sin venta)
+   */
+  frozenProducts = computed(() => {
+    return this.productClassifications()
+      .filter((c) => c.classification === 'estancado')
+      .sort((a, b) => b.fairsSinceLastSale - a.fairsSinceLastSale);
+  });
+
+  /**
+   * Sugerencias de liquidación con plan progresivo
+   */
+  liquidationSuggestions = computed<LiquidationSuggestion[]>(() => {
+    const frozen = this.frozenProducts();
+
+    return frozen.map((classification) => {
+      const product = classification.product;
+      const costPrice = product.cost;
+      const currentPrice = product.price;
+      const frozenCapital = costPrice * product.stock;
+
+      // Plan de liquidación progresivo
+      const week1Price = currentPrice * 0.8; // -20%
+      const week2Price = currentPrice * 0.7; // -30%
+      const week3Price = currentPrice * 0.6; // -40%
+
+      return {
+        product,
+        fairsWithoutSale: classification.fairsSinceLastSale,
+        daysWithoutSale: classification.daysSinceLastSale,
+        costPrice,
+        currentPrice,
+        liquidationPlan: {
+          week1: {
+            price: week1Price,
+            discount: 20,
+            profit: week1Price - costPrice,
+          },
+          week2: {
+            price: week2Price,
+            discount: 30,
+            profit: week2Price - costPrice,
+          },
+          week3: {
+            price: week3Price,
+            discount: 40,
+            profit: week3Price - costPrice,
+          },
+        },
+        frozenCapital,
+        potentialRecovery: (week1Price - costPrice) * product.stock,
+      };
+    });
+  });
+
+  /**
+   * Productos que deben recomprarse
+   */
+  productsToReorder = computed(() => {
+    return this.productClassifications()
+      .filter((c) => c.shouldReorder && c.product.stock < 10)
+      .sort((a, b) => a.product.stock - b.product.stock);
+  });
 }
+

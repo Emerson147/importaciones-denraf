@@ -94,6 +94,83 @@ export interface InventoryMovement {
   invoice?: string; // Número de factura/boleta
 }
 
+// ============================================
+// MÉTRICAS DE FERIA (Modelo de Negocio)
+// ============================================
+
+export interface CapitalHealth {
+  totalInvested: number; // Capital total invertido en inventario
+  activeCapital: number; // Productos que rotan bien (<1 mes)
+  slowCapital: number; // Productos lentos (1-2 meses)
+  frozenCapital: number; // Productos estancados (>2 meses)
+  liquidityRatio: number; // % de capital congelado
+  targetLiberation: number; // Meta de liberación en 60 días
+}
+
+export interface ProductClassification {
+  product: Product;
+  classification: 'basico' | 'variedad' | 'estancado' | 'temporada';
+  fairsSinceLastSale: number; // Número de ferias desde última venta
+  daysSinceLastSale: number; // Días desde última venta
+  totalSoldLastMonth: number; // Unidades vendidas último mes
+  rotationPerFair: number; // Promedio de ventas por feria
+  shouldReorder: boolean; // Si debe recomprarse
+  shouldLiquidate: boolean; // Si debe liquidarse
+}
+
+export interface LiquidationSuggestion {
+  product: Product;
+  fairsWithoutSale: number; // Ferias sin venta
+  daysWithoutSale: number; // Días sin venta
+  costPrice: number; // Precio de costo
+  currentPrice: number; // Precio actual
+  liquidationPlan: {
+    week1: { price: number; discount: number; profit: number }; // -20%
+    week2: { price: number; discount: number; profit: number }; // -30%
+    week3: { price: number; discount: number; profit: number }; // -40%
+  };
+  frozenCapital: number; // Capital congelado en este producto
+  potentialRecovery: number; // Recuperación potencial si liquida en semana 1
+}
+
+export interface SupplierDebt {
+  id: string;
+  supplierName: string;
+  totalDebt: number;
+  purchaseDate: Date;
+  daysSincePurchase: number;
+  products: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    cost: number;
+    totalCost: number;
+    quantitySold: number;
+    revenue: number;
+  }[];
+  amountRecovered: number; // Dinero recuperado vendiendo productos
+  amountPending: number; // Deuda pendiente
+  recoveryPercentage: number; // % recuperado
+  suggestedPayment: number; // Pago sugerido próxima feria
+}
+
+export interface FairPreparation {
+  fairDate: Date;
+  fairType: 'domingo' | 'jueves';
+  productsToTake: {
+    product: Product;
+    quantity: number;
+    reason: 'rotacion-alta' | 'liquidacion' | 'nuevo';
+  }[];
+  liquidationProducts: {
+    product: Product;
+    discountPercentage: number;
+    newPrice: number;
+  }[];
+  totalInvestment: number; // Costo de productos a llevar
+  projectedRevenue: { min: number; max: number }; // Proyección basada en historial
+}
+
 export interface StockAdjustment {
   productId: string;
   variantId?: string;
