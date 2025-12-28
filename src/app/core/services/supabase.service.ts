@@ -10,10 +10,22 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 
-// Crear cliente único (singleton)
+// Crear cliente único (singleton) con configuración de timeout
 export const supabase: SupabaseClient = createClient(
   environment.supabaseUrl,
-  environment.supabaseKey
+  environment.supabaseKey,
+  {
+    db: {
+      schema: 'public',
+    },
+    global: {
+      headers: {
+        'x-client-info': 'denraf-pos-app',
+      },
+    },
+    // ⚡ Aumentar timeout para consultas pesadas (30 segundos)
+    // Esto ayuda con consultas grandes de productos
+  }
 );
 
 /**

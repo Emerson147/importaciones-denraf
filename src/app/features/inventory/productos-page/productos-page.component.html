@@ -49,7 +49,7 @@
               
               <!-- Imagen del producto -->
               <div class="relative h-48 bg-stone-200 overflow-hidden">
-                <img [src]="product.image" class="w-full h-full object-cover" alt="">
+                <img [src]="product.image" appImageFallback class="w-full h-full object-cover" [alt]="product.name">
                 
                 <!-- Badge de stock bajo -->
                 @if (product.stock <= product.minStock) {

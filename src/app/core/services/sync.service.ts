@@ -247,6 +247,91 @@ export class SyncService {
   }
 
   /**
+   * 🔄 Cargar productos con reintento y fallback a paginación
+   * Si la consulta completa falla por timeout, carga por lotes
+   */
+  private async pullProductsWithFallback(): Promise<any[]> {
+    try {
+      // INTENTO 1: Consulta completa simple (sin filtros)
+      console.log('📦 Intentando carga completa de productos...');
+      const { data: productosRaw, error: prodError } = await supabase
+        .from('productos')
+        .select('id, name, category, brand, price, cost, stock, min_stock, sizes, colors, image, barcode, status, created_at, updated_at')
+        .limit(5000);
+
+      if (!prodError && productosRaw && productosRaw.length > 0) {
+        console.log(`✅ Carga completa exitosa: ${productosRaw.length} productos`);
+        return productosRaw;
+      }
+
+      // INTENTO 2: Si hay error de timeout (57014), intentar con menos columnas
+      if (prodError?.code === '57014') {
+        console.warn('⚠️ Timeout en carga completa, intentando con columnas básicas...');
+        const { data: basicData, error: basicError } = await supabase
+          .from('productos')
+          .select('id, name, category, price, stock, status')
+          .limit(5000);
+
+        if (!basicError && basicData) {
+          console.log(`✅ Carga básica exitosa: ${basicData.length} productos (datos simplificados)`);
+          return basicData;
+        }
+      }
+
+      // INTENTO 3: Cargar por lotes de 500
+      console.warn('⚠️ Fallback: Cargando productos por lotes...');
+      return await this.pullProductsInBatches();
+
+    } catch (error) {
+      console.error('❌ Error crítico cargando productos:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 📦 Cargar productos por lotes (paginación)
+   */
+  private async pullProductsInBatches(batchSize = 500): Promise<any[]> {
+    const allProducts: any[] = [];
+    let offset = 0;
+    let hasMore = true;
+
+    try {
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('productos')
+          .select('id, name, category, brand, price, cost, stock, status')
+          .range(offset, offset + batchSize - 1);
+
+        if (error) {
+          console.error(`❌ Error en lote offset ${offset}:`, error);
+          break;
+        }
+
+        if (data && data.length > 0) {
+          allProducts.push(...data);
+          console.log(`📦 Lote cargado: ${data.length} productos (total: ${allProducts.length})`);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+
+        // Límite de seguridad: máximo 10,000 productos
+        if (allProducts.length >= 10000) {
+          console.warn('⚠️ Límite de 10,000 productos alcanzado');
+          break;
+        }
+      }
+
+      return allProducts;
+    } catch (error) {
+      console.error('❌ Error en carga por lotes:', error);
+      return allProducts; // Retornar lo que se pudo cargar
+    }
+  }
+
+  /**
    * Descargar datos frescos de Supabase a IndexedDB
    * Retorna los productos adaptados al formato Angular
    * 
@@ -258,23 +343,26 @@ export class SyncService {
     }
 
     try {
-      // 📦 Productos - Solo productos activos con columnas específicas
-      const { data: productosRaw, error: prodError } = await supabase
-        .from('productos')
-        .select('id, name, category, brand, price, cost, stock, min_stock, sizes, colors, image, barcode, status, created_at, updated_at')
-        .eq('status', 'active') // Solo productos activos
-        .gte('stock', 0) // Solo productos con stock >= 0
-        .order('name');
+      // 📦 Productos - Usar estrategia con fallback
+      const productosRaw = await this.pullProductsWithFallback();
 
-      if (prodError) {
-        console.error('Error descargando productos:', prodError);
+      if (productosRaw.length === 0) {
+        console.error('❌ No se pudieron cargar productos de Supabase');
+        return { products: [], sales: [] };
       }
 
       // Adaptar productos de Supabase a Angular
-      const productos = (productosRaw || []).map((p: any) => this.adaptFromSupabase('product', p));
+      // 🔍 FILTRAR en cliente: solo activos con stock >= 0
+      const productos = (productosRaw || [])
+        .filter((p: any) => p.status === 'active' && p.stock >= 0)
+        .map((p: any) => this.adaptFromSupabase('product', p));
+
+      console.log(`✅ Productos descargados: ${productosRaw?.length || 0} total, ${productos.length} después de filtros`);
 
       if (productos.length > 0) {
         await this.localDb.saveProducts(productos);
+      } else {
+        console.warn('⚠️ No se encontraron productos activos en Supabase');
       }
 
       // 🛒 Ventas - Solo últimas 100 con columnas específicas e items

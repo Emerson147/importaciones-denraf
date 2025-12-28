@@ -8,7 +8,10 @@
     "build:prod": "ng build --configuration production --optimization --output-hashing=all",
     "build:analyze": "ng build --configuration production --stats-json && npx webpack-bundle-analyzer dist/sistema-master/stats.json",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "migrate-images": "ts-node --esm scripts/migrate-images.ts",
+    "migrate-base64-images": "ts-node --esm scripts/migrate-base64-images.ts",
+    "analyze-storage": "ts-node --esm scripts/analyze-storage.ts"
   },
   "prettier": {
     "printWidth": 100,
@@ -59,7 +62,9 @@
     "@angular/cli": "^21.0.1",
     "@angular/compiler-cli": "^21.0.0",
     "@spartan-ng/cli": "^0.0.1-alpha.567",
+    "@types/node": "^25.0.3",
     "jsdom": "^27.1.0",
+    "ts-node": "^10.9.2",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
   }

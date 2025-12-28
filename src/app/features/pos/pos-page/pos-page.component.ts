@@ -11,6 +11,7 @@ import { AuthService } from '../../../core/auth/auth';
 import { LoggerService } from '../../../core/services/logger.service';
 import { Sale, SaleItem, Product, ProductVariant } from '../../../core/models';
 import { UiAnimatedDialogComponent } from '../../../shared/ui/ui-animated-dialog/ui-animated-dialog.component';
+import { ImageFallbackDirective } from '../../../shared/directives/image-fallback.directive';
 
 export interface CartItem {
   product: Product;
@@ -21,7 +22,7 @@ export interface CartItem {
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiTicketComponent, UiSkeletonComponent, UiAnimatedDialogComponent],
+  imports: [CommonModule, FormsModule, UiTicketComponent, UiSkeletonComponent, UiAnimatedDialogComponent, ImageFallbackDirective],
   changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
   template: `
     <div class="relative flex flex-col md:flex-row h-[calc(100vh-2rem)] gap-3 md:gap-6 p-3 md:p-6 w-full">

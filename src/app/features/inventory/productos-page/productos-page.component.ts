@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProductService } from '../../../core/services/product.service';
+import { CloudinaryService } from '../../../core/services/cloudinary.service';
 import { ProductVariant } from '../../../core/models';
 import { 
   UiInputComponent,
@@ -8,6 +9,7 @@ import {
   UiAnimatedDialogComponent,
   UiLabelComponent
 } from '../../../shared/ui';
+import { ImageFallbackDirective } from '../../../shared/directives/image-fallback.directive';
 
 @Component({
   selector: 'app-productos-page',
@@ -17,7 +19,8 @@ import {
     UiInputComponent,
     UiButtonComponent,
     UiAnimatedDialogComponent,
-    UiLabelComponent
+    UiLabelComponent,
+    ImageFallbackDirective
   ],
   templateUrl: './productos-page.component.html',
   styleUrls: ['./productos-page.component.css'],
@@ -25,6 +28,12 @@ import {
 })
 export class ProductosPageComponent {
   private productService = inject(ProductService);
+  private cloudinary = inject(CloudinaryService);
+
+  // 🖼️ Estado de upload de imagen
+  isUploadingImage = signal(false);
+  uploadProgress = signal(0);
+  selectedFile = signal<File | null>(null);
 
   // Productos desde el servicio central
   products = this.productService.products;
@@ -295,6 +304,10 @@ export class ProductosPageComponent {
   onFileSelected(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {
+      // Guardar archivo para subir después
+      this.selectedFile.set(file);
+
+      // Mostrar preview local
       const reader = new FileReader();
       reader.onload = () => {
         this.selectedImage.set(reader.result as string);
@@ -303,7 +316,7 @@ export class ProductosPageComponent {
     }
   }
 
-  saveProduct() {
+  async saveProduct() {
     if (!this.isFormValid()) {
       alert('Por favor completa todos los campos correctamente y asigna stock a las variantes');
       return;
@@ -317,6 +330,34 @@ export class ProductosPageComponent {
     const uniqueSizes = Array.from(new Set(allVariants.map(v => v.size)));
     const uniqueColors = Array.from(new Set(allVariants.map(v => v.color)));
 
+    // 🖼️ Subir imagen a Cloudinary si hay un archivo nuevo
+    let imageUrl = this.selectedImage();
+    const file = this.selectedFile();
+    
+    if (file && this.cloudinary.isConfigured()) {
+      try {
+        this.isUploadingImage.set(true);
+        console.log('📤 Subiendo imagen a Cloudinary...');
+        
+        const publicId = editingId || `producto-${Date.now()}`;
+        const result = await this.cloudinary.uploadImage(
+          file,
+          publicId,
+          (progress) => this.uploadProgress.set(progress.percentage)
+        );
+        
+        imageUrl = result.url;
+        console.log('✅ Imagen subida:', imageUrl);
+      } catch (error) {
+        console.error('❌ Error subiendo imagen:', error);
+        alert('Error al subir la imagen. Se guardará sin imagen.');
+        imageUrl = '/images/placeholder-product.svg';
+      } finally {
+        this.isUploadingImage.set(false);
+        this.uploadProgress.set(0);
+      }
+    }
+
     if (editingId) {
       // Actualizar producto existente
       const success = this.productService.updateProduct(editingId, {
@@ -328,7 +369,7 @@ export class ProductosPageComponent {
         sizes: uniqueSizes,
         colors: uniqueColors,
         variants: allVariants,
-        image: this.selectedImage() || undefined,
+        image: imageUrl || undefined,
       });
 
       if (success) {
@@ -349,7 +390,7 @@ export class ProductosPageComponent {
         colors: uniqueColors,
         variants: allVariants,
         barcode: `BAR-${Date.now()}`,
-        image: this.selectedImage() || 'https://via.placeholder.com/100',
+        image: imageUrl || '/images/placeholder-product.svg',
         status: 'active' as const,
       };
 

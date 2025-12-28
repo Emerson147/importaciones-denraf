@@ -3,257 +3,231 @@ import { CommonModule } from '@angular/common';
 import { GamificationService } from '../../core/services/gamification.service';
 import { ThemeService } from '../../core/theme/theme.service';
 import { AuthService } from '../../core/auth/auth';
+import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-header.component';
 
 @Component({
   selector: 'app-goals-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, UiPageHeaderComponent],
   template: `
-    <div class="min-h-screen p-6 transition-colors duration-150"
-         [class.bg-stone-50]="!isDark()"
-         [class.bg-stone-950]="isDark()">
-      
-      <!-- Header -->
-      <div class="max-w-7xl mx-auto mb-8">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h1 class="text-3xl font-bold transition-colors"
-                [class.text-stone-900]="!isDark()"
-                [class.text-stone-100]="isDark()">
-              Metas y Logros
-              @if (currentUser()) {
-                <span class="text-xl transition-colors ml-3"
-                      [class.text-stone-500]="!isDark()"
-                      [class.text-stone-400]="isDark()">
-                  · {{ currentUser()!.name }}
-                </span>
-              }
-            </h1>
-            <p class="transition-colors mt-1"
-               [class.text-stone-600]="!isDark()"
-               [class.text-stone-400]="isDark()">
-              Sigue tu progreso y desbloquea recompensas
+    <div class="min-h-screen bg-stone-50 dark:bg-stone-950 p-4 sm:p-6 lg:p-8 transition-colors duration-100">
+      <div class="max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
+        
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <app-ui-page-header
+            title="Metas y Logros"
+            [subtitle]="currentUser() ? currentUser()!.name : 'Gamificación'"
+            icon="🎯"
+          />
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <!-- Nivel -->
+          <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
+            <div class="flex items-start justify-between mb-4">
+              <div class="h-10 w-10 rounded-xl bg-violet-500 dark:bg-violet-600 flex items-center justify-center text-white transition-colors duration-100">
+                <span class="material-icons-outlined text-lg">military_tech</span>
+              </div>
+              <span class="text-xs font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-1 rounded-full">
+                Nivel
+              </span>
+            </div>
+            <p class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1">
+              Nivel Actual
+            </p>
+            <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">
+              {{ gamification.currentLevel() }}
+            </p>
+            <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              {{ gamification.pointsToNextLevel() }} pts al siguiente
             </p>
           </div>
-          
-          <!-- Stats Card -->
-          <div class="flex gap-4">
-            <div class="px-6 py-4 rounded-xl backdrop-blur-sm transition-all duration-150"
-                 [class.bg-white/80]="!isDark()"
-                 [class.bg-stone-900/80]="isDark()"
-                 [class.shadow-sm]="!isDark()">
-              <div class="text-sm transition-colors"
-                   [class.text-stone-600]="!isDark()"
-                   [class.text-stone-400]="isDark()">
-                Nivel
-              </div>
-              <div class="text-3xl font-bold transition-colors"
-                   [class.text-stone-900]="!isDark()"
-                   [class.text-stone-100]="isDark()">
-                {{ gamification.currentLevel() }}
-              </div>
-            </div>
-            
-            <div class="px-6 py-4 rounded-xl backdrop-blur-sm transition-all duration-150"
-                 [class.bg-white/80]="!isDark()"
-                 [class.bg-stone-900/80]="isDark()"
-                 [class.shadow-sm]="!isDark()">
-              <div class="text-sm transition-colors"
-                   [class.text-stone-600]="!isDark()"
-                   [class.text-stone-400]="isDark()">
-                Puntos
-              </div>
-              <div class="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-                {{ gamification.stats().totalPoints }}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Progress to Next Level -->
-        <div class="px-4 py-3 rounded-xl backdrop-blur-sm transition-all duration-150"
-             [class.bg-white/60]="!isDark()"
-             [class.bg-stone-900/60]="isDark()">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium transition-colors"
-                  [class.text-stone-700]="!isDark()"
-                  [class.text-stone-300]="isDark()">
-              Progreso al Nivel {{ gamification.currentLevel() + 1 }}
-            </span>
-            <span class="text-sm transition-colors"
-                  [class.text-stone-600]="!isDark()"
-                  [class.text-stone-400]="isDark()">
-              {{ gamification.pointsToNextLevel() }} puntos restantes
-            </span>
-          </div>
-          <div class="h-2 rounded-full overflow-hidden transition-colors"
-               [class.bg-stone-200]="!isDark()"
-               [class.bg-stone-800]="isDark()">
-            <div class="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
-                 [style.width.%]="levelProgress()"></div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Main Content Grid -->
-      <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Goals Section (2 cols) -->
-        <div class="lg:col-span-2 space-y-6">
-          <div>
-            <h2 class="text-xl font-bold mb-4 transition-colors"
-                [class.text-stone-900]="!isDark()"
-                [class.text-stone-100]="isDark()">
-              🎯 Metas Activas
-            </h2>
-            
-            <div class="space-y-3">
-              @for (goal of gamification.activeGoals(); track goal.id) {
-                <div class="p-5 rounded-xl backdrop-blur-sm transition-all duration-150 hover:scale-[1.01]"
-                     [class.bg-white/80]="!isDark()"
-                     [class.bg-stone-900/80]="isDark()"
-                     [class.shadow-sm]="!isDark()"
-                     [class.hover:shadow-md]="!isDark()">
-                  <div class="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 class="font-semibold transition-colors"
-                          [class.text-stone-900]="!isDark()"
-                          [class.text-stone-100]="isDark()">
-                        {{ goal.title }}
-                      </h3>
-                      <p class="text-sm transition-colors"
-                         [class.text-stone-600]="!isDark()"
-                         [class.text-stone-400]="isDark()">
-                        {{ goal.description }}
-                      </p>
-                    </div>
-                    
-                    <span class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
-                          [class.bg-blue-100]="!isDark() && goal.type === 'daily'"
-                          [class.text-blue-700]="!isDark() && goal.type === 'daily'"
-                          [class.bg-blue-900/40]="isDark() && goal.type === 'daily'"
-                          [class.text-blue-300]="isDark() && goal.type === 'daily'"
-                          [class.bg-purple-100]="!isDark() && goal.type === 'weekly'"
-                          [class.text-purple-700]="!isDark() && goal.type === 'weekly'"
-                          [class.bg-purple-900/40]="isDark() && goal.type === 'weekly'"
-                          [class.text-purple-300]="isDark() && goal.type === 'weekly'"
-                          [class.bg-emerald-100]="!isDark() && goal.type === 'monthly'"
-                          [class.text-emerald-700]="!isDark() && goal.type === 'monthly'"
-                          [class.bg-emerald-900/40]="isDark() && goal.type === 'monthly'"
-                          [class.text-emerald-300]="isDark() && goal.type === 'monthly'">
-                      {{ goalTypeLabel(goal.type) }}
+          <!-- Puntos Totales -->
+          <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
+            <div class="flex items-start justify-between mb-4">
+              <div class="h-10 w-10 rounded-xl bg-amber-500 dark:bg-amber-600 flex items-center justify-center text-white transition-colors duration-100">
+                <span class="material-icons-outlined text-lg">stars</span>
+              </div>
+              <span class="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-full">
+                Total
+              </span>
+            </div>
+            <p class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1">
+              Puntos
+            </p>
+            <p class="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+              {{ gamification.stats().totalPoints }}
+            </p>
+            <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              Progreso {{ levelProgress() | number: '1.0-0' }}%
+            </p>
+          </div>
+
+          <!-- Racha Actual -->
+          <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
+            <div class="flex items-start justify-between mb-4">
+              <div class="h-10 w-10 rounded-xl bg-orange-500 dark:bg-orange-600 flex items-center justify-center text-white transition-colors duration-100">
+                <span class="material-icons-outlined text-lg">local_fire_department</span>
+              </div>
+              <span class="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
+                Racha
+              </span>
+            </div>
+            <p class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1">
+              Días Consecutivos
+            </p>
+            <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">
+              {{ gamification.stats().currentStreak }}
+            </p>
+            <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              Máx: {{ gamification.stats().longestStreak }} días
+            </p>
+          </div>
+
+          <!-- Logros Desbloqueados -->
+          <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
+            <div class="flex items-start justify-between mb-4">
+              <div class="h-10 w-10 rounded-xl bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center text-white transition-colors duration-100">
+                <span class="material-icons-outlined text-lg">emoji_events</span>
+              </div>
+              <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
+                Logros
+              </span>
+            </div>
+            <p class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1">
+              Desbloqueados
+            </p>
+            <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">
+              {{ unlockedAchievements() }}
+            </p>
+            <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
+              de {{ gamification.allAchievements().length }} totales
+            </p>
+          </div>
+        </div>
+
+
+        <!-- Metas Activas -->
+        <div class="space-y-3">
+          <h2 class="text-sm font-bold text-stone-800 dark:text-stone-200 uppercase tracking-wide">
+            🎯 Metas Activas
+          </h2>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            @for (goal of gamification.activeGoals(); track goal.id) {
+              <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
+                <div class="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 class="font-semibold text-stone-900 dark:text-stone-100 mb-1">
+                      {{ goal.title }}
+                    </h3>
+                    <p class="text-sm text-stone-600 dark:text-stone-400">
+                      {{ goal.description }}
+                    </p>
+                  </div>
+                  
+                  <span class="px-3 py-1 rounded-full text-xs font-medium flex-shrink-0"
+                        [class.bg-blue-50]="goal.type === 'daily'"
+                        [class.text-blue-700]="goal.type === 'daily'"
+                        [class.dark:bg-blue-900/30]="goal.type === 'daily'"
+                        [class.dark:text-blue-300]="goal.type === 'daily'"
+                        [class.bg-purple-50]="goal.type === 'weekly'"
+                        [class.text-purple-700]="goal.type === 'weekly'"
+                        [class.dark:bg-purple-900/30]="goal.type === 'weekly'"
+                        [class.dark:text-purple-300]="goal.type === 'weekly'"
+                        [class.bg-emerald-50]="goal.type === 'monthly'"
+                        [class.text-emerald-700]="goal.type === 'monthly'"
+                        [class.dark:bg-emerald-900/30]="goal.type === 'monthly'"
+                        [class.dark:text-emerald-300]="goal.type === 'monthly'">
+                    {{ goalTypeLabel(goal.type) }}
+                  </span>
+                </div>
+                
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="font-medium text-stone-700 dark:text-stone-300">
+                      {{ goal.current }} / {{ goal.target }} {{ metricLabel(goal.metric) }}
+                    </span>
+                    <span class="text-stone-600 dark:text-stone-400">
+                      {{ goalProgress(goal.current, goal.target) }}%
                     </span>
                   </div>
                   
-                  <div class="space-y-2">
-                    <div class="flex items-center justify-between text-sm">
-                      <span class="font-medium transition-colors"
-                            [class.text-stone-700]="!isDark()"
-                            [class.text-stone-300]="isDark()">
-                        {{ goal.current }} / {{ goal.target }} {{ metricLabel(goal.metric) }}
-                      </span>
-                      <span class="transition-colors"
-                            [class.text-stone-600]="!isDark()"
-                            [class.text-stone-400]="isDark()">
-                        {{ goalProgress(goal.current, goal.target) }}%
-                      </span>
-                    </div>
-                    
-                    <div class="h-2 rounded-full overflow-hidden transition-colors"
-                         [class.bg-stone-200]="!isDark()"
-                         [class.bg-stone-800]="isDark()">
-                      <div class="h-full transition-all duration-300"
-                           [class.bg-gradient-to-r]="true"
-                           [class.from-emerald-500]="true"
-                           [class.to-teal-500]="true"
-                           [style.width.%]="goalProgress(goal.current, goal.target)"></div>
-                    </div>
+                  <div class="h-2 rounded-full overflow-hidden bg-stone-200 dark:bg-stone-800">
+                    <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300"
+                         [style.width.%]="goalProgress(goal.current, goal.target)"></div>
                   </div>
                 </div>
-              } @empty {
-                <div class="p-8 text-center rounded-xl backdrop-blur-sm transition-colors"
-                     [class.bg-white/60]="!isDark()"
-                     [class.bg-stone-900/60]="isDark()">
-                  <span class="text-4xl mb-2 block">🎯</span>
-                  <p class="transition-colors"
-                     [class.text-stone-600]="!isDark()"
-                     [class.text-stone-400]="isDark()">
-                    No hay metas activas
-                  </p>
-                </div>
-              }
-            </div>
+              </div>
+            } @empty {
+              <div class="col-span-full bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 p-12 text-center">
+                <span class="text-6xl mb-3 block opacity-40">🎯</span>
+                <p class="text-stone-600 dark:text-stone-400">
+                  No hay metas activas
+                </p>
+              </div>
+            }
           </div>
+        </div>
 
-          <!-- Achievements Section -->
-          <div>
-            <h2 class="text-xl font-bold mb-4 transition-colors"
-                [class.text-stone-900]="!isDark()"
-                [class.text-stone-100]="isDark()">
+        <!-- Logros -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <!-- Achievements Grid (2 cols) -->
+          <div class="lg:col-span-2 space-y-3">
+            <h2 class="text-sm font-bold text-stone-800 dark:text-stone-200 uppercase tracking-wide">
               🏆 Logros
             </h2>
             
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               @for (achievement of gamification.allAchievements(); track achievement.id) {
-                <div class="p-4 rounded-xl backdrop-blur-sm transition-all duration-150"
-                     [class.bg-white/80]="!isDark() && achievement.unlocked"
-                     [class.bg-stone-900/80]="isDark() && achievement.unlocked"
-                     [class.bg-white/40]="!isDark() && !achievement.unlocked"
-                     [class.bg-stone-900/40]="isDark() && !achievement.unlocked"
-                     [class.shadow-sm]="!isDark() && achievement.unlocked"
-                     [class.opacity-60]="!achievement.unlocked"
-                     [class.hover:scale-105]="achievement.unlocked">
+                <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-5 hover:shadow-md transition-all"
+                     [class.opacity-60]="!achievement.unlocked">
                   
                   <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center transition-colors"
-                         [class.bg-amber-100]="!isDark() && achievement.tier === 'bronze'"
-                         [class.text-amber-700]="!isDark() && achievement.tier === 'bronze'"
-                         [class.bg-amber-900/40]="isDark() && achievement.tier === 'bronze'"
-                         [class.text-amber-300]="isDark() && achievement.tier === 'bronze'"
-                         [class.bg-slate-100]="!isDark() && achievement.tier === 'silver'"
-                         [class.text-slate-700]="!isDark() && achievement.tier === 'silver'"
-                         [class.bg-slate-900/40]="isDark() && achievement.tier === 'silver'"
-                         [class.text-slate-300]="isDark() && achievement.tier === 'silver'"
-                         [class.bg-yellow-100]="!isDark() && achievement.tier === 'gold'"
-                         [class.text-yellow-700]="!isDark() && achievement.tier === 'gold'"
-                         [class.bg-yellow-900/40]="isDark() && achievement.tier === 'gold'"
-                         [class.text-yellow-300]="isDark() && achievement.tier === 'gold'"
-                         [class.bg-purple-100]="!isDark() && achievement.tier === 'platinum'"
-                         [class.text-purple-700]="!isDark() && achievement.tier === 'platinum'"
-                         [class.bg-purple-900/40]="isDark() && achievement.tier === 'platinum'"
-                         [class.text-purple-300]="isDark() && achievement.tier === 'platinum'">
-                      <span class="material-icons">{{ achievement.icon }}</span>
+                    <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+                         [class.bg-amber-100]="achievement.tier === 'bronze'"
+                         [class.text-amber-700]="achievement.tier === 'bronze'"
+                         [class.dark:bg-amber-900/30]="achievement.tier === 'bronze'"
+                         [class.dark:text-amber-300]="achievement.tier === 'bronze'"
+                         [class.bg-slate-100]="achievement.tier === 'silver'"
+                         [class.text-slate-700]="achievement.tier === 'silver'"
+                         [class.dark:bg-slate-900/30]="achievement.tier === 'silver'"
+                         [class.dark:text-slate-300]="achievement.tier === 'silver'"
+                         [class.bg-yellow-100]="achievement.tier === 'gold'"
+                         [class.text-yellow-700]="achievement.tier === 'gold'"
+                         [class.dark:bg-yellow-900/30]="achievement.tier === 'gold'"
+                         [class.dark:text-yellow-300]="achievement.tier === 'gold'"
+                         [class.bg-purple-100]="achievement.tier === 'platinum'"
+                         [class.text-purple-700]="achievement.tier === 'platinum'"
+                         [class.dark:bg-purple-900/30]="achievement.tier === 'platinum'"
+                         [class.dark:text-purple-300]="achievement.tier === 'platinum'">
+                      <span class="material-icons-outlined text-2xl">{{ achievement.icon }}</span>
                     </div>
                     
                     <div class="flex-1 min-w-0">
-                      <h3 class="font-semibold text-sm transition-colors"
-                          [class.text-stone-900]="!isDark()"
-                          [class.text-stone-100]="isDark()">
+                      <h3 class="font-semibold text-sm text-stone-900 dark:text-stone-100 mb-1">
                         {{ achievement.title }}
                       </h3>
-                      <p class="text-xs transition-colors"
-                         [class.text-stone-600]="!isDark()"
-                         [class.text-stone-400]="isDark()">
+                      <p class="text-xs text-stone-600 dark:text-stone-400 mb-2">
                         {{ achievement.description }}
                       </p>
                       
                       @if (!achievement.unlocked) {
-                        <div class="mt-2">
-                          <div class="h-1 rounded-full overflow-hidden transition-colors"
-                               [class.bg-stone-200]="!isDark()"
-                               [class.bg-stone-800]="isDark()">
+                        <div class="space-y-1">
+                          <div class="h-1.5 rounded-full overflow-hidden bg-stone-200 dark:bg-stone-800">
                             <div class="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
                                  [style.width.%]="achievementProgress(achievement.progress, achievement.requirement)"></div>
                           </div>
-                          <p class="text-xs mt-1 transition-colors"
-                             [class.text-stone-500]="!isDark()"
-                             [class.text-stone-500]="isDark()">
+                          <p class="text-xs text-stone-500 dark:text-stone-500">
                             {{ achievement.progress }} / {{ achievement.requirement }}
                           </p>
                         </div>
                       } @else {
-                        <div class="flex items-center gap-1 mt-1">
-                          <span class="material-icons text-sm text-emerald-500">check_circle</span>
+                        <div class="flex items-center gap-1.5">
+                          <span class="material-icons-outlined text-sm text-emerald-500">check_circle</span>
                           <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             +{{ achievement.points }} pts
                           </span>
@@ -265,103 +239,84 @@ import { AuthService } from '../../core/auth/auth';
               }
             </div>
           </div>
-        </div>
 
-        <!-- Leaderboard Section (1 col) -->
-        <div class="lg:col-span-1">
-          <h2 class="text-xl font-bold mb-4 transition-colors"
-              [class.text-stone-900]="!isDark()"
-              [class.text-stone-100]="isDark()">
-            👑 Ranking
-          </h2>
-          
-          <div class="space-y-3">
-            @for (entry of gamification.allLeaderboard(); track entry.userId) {
-              <div class="p-4 rounded-xl backdrop-blur-sm transition-all duration-150"
-                   [class.bg-white/80]="!isDark()"
-                   [class.bg-stone-900/80]="isDark()"
-                   [class.shadow-sm]="!isDark()"
-                   [class.hover:shadow-md]="!isDark()"
-                   [class.ring-2]="entry.rank === 1"
-                   [class.ring-amber-400]="entry.rank === 1">
-                
-                <div class="flex items-center gap-3">
-                  <!-- Rank Badge -->
-                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors"
-                       [class.bg-gradient-to-br]="entry.rank <= 3"
-                       [class.from-yellow-400]="entry.rank === 1"
-                       [class.to-yellow-600]="entry.rank === 1"
-                       [class.text-white]="entry.rank === 1"
-                       [class.from-slate-300]="entry.rank === 2"
-                       [class.to-slate-500]="entry.rank === 2"
-                       [class.text-white]="entry.rank === 2"
-                       [class.from-amber-600]="entry.rank === 3"
-                       [class.to-amber-800]="entry.rank === 3"
-                       [class.text-white]="entry.rank === 3"
-                       [class.bg-stone-200]="entry.rank > 3 && !isDark()"
-                       [class.bg-stone-800]="entry.rank > 3 && isDark()"
-                       [class.text-stone-700]="entry.rank > 3 && !isDark()"
-                       [class.text-stone-300]="entry.rank > 3 && isDark()">
-                    {{ entry.rank }}
-                  </div>
+          <!-- Ranking (1 col) -->
+          <div class="lg:col-span-1 space-y-3">
+            <h2 class="text-sm font-bold text-stone-800 dark:text-stone-200 uppercase tracking-wide">
+              👑 Ranking
+            </h2>
+            
+            <div class="space-y-3">
+              @for (entry of gamification.allLeaderboard(); track entry.userId) {
+                <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-4 hover:shadow-md transition-all"
+                     [class.ring-2]="entry.rank === 1"
+                     [class.ring-amber-400]="entry.rank === 1"
+                     [class.dark:ring-amber-500]="entry.rank === 1">
                   
-                  <!-- User Info -->
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                      <h3 class="font-semibold text-sm transition-colors"
-                          [class.text-stone-900]="!isDark()"
-                          [class.text-stone-100]="isDark()">
-                        {{ entry.userName }}
-                      </h3>
-                      @if (entry.streak > 0) {
-                        <span class="text-xs" title="Racha">🔥{{ entry.streak }}</span>
-                      }
+                  <div class="flex items-center gap-3">
+                    <!-- Rank Badge -->
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
+                         [class.bg-gradient-to-br]="entry.rank <= 3"
+                         [class.from-yellow-400]="entry.rank === 1"
+                         [class.to-yellow-600]="entry.rank === 1"
+                         [class.text-white]="entry.rank === 1"
+                         [class.from-slate-300]="entry.rank === 2"
+                         [class.to-slate-500]="entry.rank === 2"
+                         [class.text-white]="entry.rank === 2"
+                         [class.from-amber-600]="entry.rank === 3"
+                         [class.to-amber-800]="entry.rank === 3"
+                         [class.text-white]="entry.rank === 3"
+                         [class.bg-stone-200]="entry.rank > 3"
+                         [class.dark:bg-stone-800]="entry.rank > 3"
+                         [class.text-stone-700]="entry.rank > 3"
+                         [class.dark:text-stone-300]="entry.rank > 3">
+                      {{ entry.rank }}
                     </div>
                     
-                    <div class="flex items-center gap-3 mt-1 text-xs transition-colors"
-                         [class.text-stone-600]="!isDark()"
-                         [class.text-stone-400]="isDark()">
-                      <span>{{ entry.totalSales }} ventas</span>
-                      <span>•</span>
-                      <span>{{ entry.achievementsCount }} logros</span>
+                    <!-- User Info -->
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <h3 class="font-semibold text-sm text-stone-900 dark:text-stone-100 truncate">
+                          {{ entry.userName }}
+                        </h3>
+                        @if (entry.streak > 0) {
+                          <span class="text-xs" title="Racha">🔥{{ entry.streak }}</span>
+                        }
+                      </div>
+                      
+                      <div class="flex items-center gap-2 mt-1 text-xs text-stone-600 dark:text-stone-400">
+                        <span>{{ entry.totalSales }} ventas</span>
+                        <span>•</span>
+                        <span>{{ entry.achievementsCount }} logros</span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <!-- Points -->
-                  <div class="text-right">
-                    <div class="font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-                      {{ entry.points }}
-                    </div>
-                    <div class="text-xs transition-colors"
-                         [class.text-stone-500]="!isDark()"
-                         [class.text-stone-500]="isDark()">
-                      puntos
+                    
+                    <!-- Points -->
+                    <div class="text-right flex-shrink-0">
+                      <div class="font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+                        {{ entry.points }}
+                      </div>
+                      <div class="text-xs text-stone-500 dark:text-stone-500">
+                        pts
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            } @empty {
-              <div class="p-8 text-center rounded-xl backdrop-blur-sm transition-colors"
-                   [class.bg-white/60]="!isDark()"
-                   [class.bg-stone-900/60]="isDark()">
-                <span class="text-4xl mb-2 block">👑</span>
-                <p class="transition-colors"
-                   [class.text-stone-600]="!isDark()"
-                   [class.text-stone-400]="isDark()">
-                  El ranking se actualizará pronto
-                </p>
-              </div>
-            }
+              } @empty {
+                <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 p-12 text-center">
+                  <span class="text-6xl mb-3 block opacity-40">👑</span>
+                  <p class="text-stone-600 dark:text-stone-400 text-sm">
+                    El ranking se actualizará pronto
+                  </p>
+                </div>
+              }
+            </div>
           </div>
         </div>
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
+  styles: []
 })
 export class GoalsPageComponent {
   gamification = inject(GamificationService);
@@ -378,6 +333,10 @@ export class GoalsPageComponent {
     const levelEnd = currentLevel * 500;
     const progress = ((currentPoints - levelStart) / (levelEnd - levelStart)) * 100;
     return Math.min(Math.max(progress, 0), 100);
+  });
+
+  unlockedAchievements = computed(() => {
+    return this.gamification.allAchievements().filter(a => a.unlocked).length;
   });
 
   constructor() {

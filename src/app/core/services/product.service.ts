@@ -306,6 +306,12 @@ export class ProductService {
   // ✅ API pública para acceder a productos
   products = this.productsSignal.asReadonly();
 
+  // 🔤 Productos ordenados alfabéticamente (ordenamiento en cliente, no en DB)
+  sortedProducts = computed(() => {
+    const prods = this.productsSignal();
+    return [...prods].sort((a, b) => a.name.localeCompare(b.name));
+  });
+
   // Computed útiles
   activeProducts = computed(() => this.productsSignal().filter((p) => p.stock > 0));
 
