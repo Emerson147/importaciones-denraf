@@ -45,7 +45,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           
           @for (product of filteredProducts(); track product.id) {
-            <div class="group bg-stone-50 rounded-2xl border border-stone-100 overflow-hidden hover:border-stone-300 transition-colors duration-100">
+            <div class="group bg-stone-50 rounded-2xl border border-stone-100 overflow-hidden hover:border-stone-300 hover:scale-[1.01] hover:-translate-y-1 transition-all duration-300 ease-out cursor-pointer shadow-sm hover:shadow-lg">
               
               <!-- Imagen del producto -->
               <div class="relative h-48 bg-stone-200 overflow-hidden">
@@ -136,15 +136,15 @@
                 <div class="flex gap-2 pt-2">
                   <button 
                     (click)="openEdit(product.id)"
-                    class="flex-1 h-9 rounded-lg bg-stone-900 hover:bg-black text-white text-xs font-medium transition-colors flex items-center justify-center gap-1">
-                    <span class="material-icons-outlined text-sm">edit</span>
+                    class="flex-1 h-9 rounded-lg bg-stone-900 hover:bg-black text-white text-xs font-medium transition-all duration-200 ease-out flex items-center justify-center gap-1 hover:scale-[1.02] active:scale-95">
+                    <span class="material-icons-outlined text-sm group-hover:rotate-6 transition-transform duration-200">edit</span>
                     Editar
                   </button>
                   <button 
                     (click)="handleAction('delete', product.id)"
-                    class="h-9 w-9 rounded-lg border border-stone-200 hover:border-stone-400 hover:bg-stone-100 text-stone-500 hover:text-stone-900 transition-colors flex items-center justify-center"
+                    class="h-9 w-9 rounded-lg border border-stone-200 hover:border-stone-400 hover:bg-stone-100 text-stone-500 hover:text-stone-900 transition-all duration-200 ease-out flex items-center justify-center hover:scale-110 active:scale-95"
                   >
-                    <span class="material-icons-outlined text-sm">delete</span>
+                    <span class="material-icons-outlined text-sm group-hover:rotate-12 transition-transform duration-200">delete</span>
                   </button>
                 </div>
               </div>

@@ -10,12 +10,7 @@ import { CommonModule } from '@angular/common';
     <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all duration-300">
       <!-- Header con icono -->
       <div class="flex items-start justify-between mb-4">
-        <div class="h-12 w-12 rounded-xl flex items-center justify-center transition-colors duration-300"
-             [ngClass]="{
-               'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400': trend === 'up',
-               'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400': trend === 'down',
-               'bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300': trend === 'stable'
-             }">
+        <div class="h-12 w-12 rounded-xl bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 flex items-center justify-center transition-colors duration-300">
           <span class="material-icons-outlined text-2xl">{{ icon }}</span>
         </div>
         
@@ -25,7 +20,7 @@ import { CommonModule } from '@angular/common';
                [ngClass]="{
                  'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400': trend === 'up',
                  'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400': trend === 'down',
-                 'bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300': trend === 'stable'
+                 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300': trend === 'stable'
                }">
             @if (trend === 'up') {
               <span class="material-icons-outlined text-sm">trending_up</span>

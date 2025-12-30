@@ -58,7 +58,7 @@
 
       <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
         <div class="flex items-center gap-3 mb-4">
-          <div class="h-10 w-10 rounded-xl bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white">
+          <div class="h-10 w-10 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900">
             <span class="material-icons-outlined text-lg">shopping_cart</span>
           </div>
           <p class="text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500 font-medium">Venta Promedio</p>
@@ -69,7 +69,7 @@
 
       <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 transition-colors duration-100">
         <div class="flex items-center gap-3 mb-4">
-          <div class="h-10 w-10 rounded-xl bg-purple-500 dark:bg-purple-600 flex items-center justify-center text-white">
+          <div class="h-10 w-10 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900">
             <span class="material-icons-outlined text-lg">inventory_2</span>
           </div>
           <p class="text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500 font-medium">Productos Vendidos</p>
@@ -87,7 +87,7 @@
         </div>
         <p class="text-3xl font-bold text-stone-900 dark:text-stone-100">82%</p>
         <div class="w-full bg-stone-100 dark:bg-stone-800 h-2 rounded-full overflow-hidden mt-3">
-          <div class="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style="width: 82%"></div>
+          <div class="h-full bg-emerald-500 dark:bg-emerald-600 rounded-full" style="width: 82%"></div>
         </div>
       </div>
 
@@ -156,10 +156,8 @@
             <div class="flex items-center gap-4 group">
               <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm border"
                    [ngClass]="{
-                     'bg-yellow-50 text-yellow-700 border-yellow-200': i === 0,
-                     'bg-slate-50 text-slate-700 border-slate-200': i === 1,
-                     'bg-amber-50 text-amber-700 border-amber-200': i === 2,
-                     'bg-stone-50 text-stone-600 border-stone-200': i > 2
+                     'bg-gradient-to-br from-amber-50 to-orange-50 text-amber-700 border-amber-200 dark:from-amber-950/30 dark:to-orange-950/30 dark:text-amber-400 dark:border-amber-800': i === 0,
+                     'bg-stone-100 text-stone-700 border-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-700': i > 0
                    }">
                 #{{ i + 1 }}
               </div>
@@ -180,10 +178,8 @@
                   <div 
                     class="h-full rounded-full transition-all duration-1000"
                     [ngClass]="{
-                      'bg-yellow-500': i === 0,
-                      'bg-slate-400': i === 1,
-                      'bg-amber-500': i === 2,
-                      'bg-stone-400': i > 2
+                      'bg-gradient-to-r from-amber-500 to-orange-500': i === 0,
+                      'bg-emerald-500 dark:bg-emerald-600': i > 0
                     }"
                     [style.width.%]="(item.revenue / 7000) * 100"
                   ></div>

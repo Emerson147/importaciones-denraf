@@ -29,27 +29,27 @@
       <div class="p-6">
         <!-- Métricas de Capital -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
-          <div class="bg-white/10 backdrop-blur rounded-xl p-4 hover:bg-white/15 transition-all">
+          <div class="group bg-white/10 backdrop-blur rounded-xl p-4 hover:bg-white/15 hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer shadow-sm hover:shadow-lg">
             <p class="text-xs text-stone-300 uppercase tracking-wide font-medium mb-1">Total</p>
-            <p class="text-3xl font-bold">S/ {{ capitalHealth().totalInvested | number:'1.0-0' }}</p>
+            <p class="text-3xl font-bold group-hover:scale-105 transition-transform duration-200 ease-out transform-gpu">S/ {{ capitalHealth().totalInvested | number:'1.0-0' }}</p>
             <p class="text-xs text-stone-400 mt-1">{{ metrics().totalProducts }} prod.</p>
           </div>
 
-          <div class="bg-emerald-500/20 backdrop-blur rounded-xl p-4 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all">
+          <div class="group bg-emerald-500/20 backdrop-blur rounded-xl p-4 border border-emerald-500/30 hover:bg-emerald-500/25 hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer shadow-sm hover:shadow-lg">
             <p class="text-xs text-emerald-200 uppercase tracking-wide font-medium mb-1">✅ Activo</p>
-            <p class="text-3xl font-bold text-emerald-300">S/ {{ capitalHealth().activeCapital | number:'1.0-0' }}</p>
+            <p class="text-3xl font-bold text-emerald-300 group-hover:scale-105 transition-transform duration-200 ease-out transform-gpu">S/ {{ capitalHealth().activeCapital | number:'1.0-0' }}</p>
             <p class="text-xs text-emerald-300/70 mt-1">&lt;30 días</p>
           </div>
 
-          <div class="bg-amber-500/20 backdrop-blur rounded-xl p-4 border border-amber-500/30 hover:bg-amber-500/25 transition-all">
+          <div class="group bg-amber-500/20 backdrop-blur rounded-xl p-4 border border-amber-500/30 hover:bg-amber-500/25 hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer shadow-sm hover:shadow-lg">
             <p class="text-xs text-amber-200 uppercase tracking-wide font-medium mb-1">⚠️ Lento</p>
-            <p class="text-3xl font-bold text-amber-300">S/ {{ capitalHealth().slowCapital | number:'1.0-0' }}</p>
+            <p class="text-3xl font-bold text-amber-300 group-hover:scale-105 transition-transform duration-200 ease-out transform-gpu">S/ {{ capitalHealth().slowCapital | number:'1.0-0' }}</p>
             <p class="text-xs text-amber-300/70 mt-1">30-60 días</p>
           </div>
 
-          <div class="bg-red-500/20 backdrop-blur rounded-xl p-4 border border-red-500/30 hover:bg-red-500/25 transition-all">
+          <div class="group bg-red-500/20 backdrop-blur rounded-xl p-4 border border-red-500/30 hover:bg-red-500/25 hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer shadow-sm hover:shadow-lg">
             <p class="text-xs text-red-200 uppercase tracking-wide font-medium mb-1">🔴 Congelado</p>
-            <p class="text-3xl font-bold text-red-300">S/ {{ capitalHealth().frozenCapital | number:'1.0-0' }}</p>
+            <p class="text-3xl font-bold text-red-300 group-hover:scale-105 transition-transform duration-200 ease-out transform-gpu">S/ {{ capitalHealth().frozenCapital | number:'1.0-0' }}</p>
             <p class="text-xs text-red-300/70 mt-1">&gt;60 días</p>
           </div>
         </div>

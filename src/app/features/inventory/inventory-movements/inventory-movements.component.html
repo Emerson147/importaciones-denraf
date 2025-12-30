@@ -21,26 +21,26 @@
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="bg-white dark:bg-stone-900 rounded-2xl p-6 border border-stone-100 dark:border-stone-800 shadow-sm transition-colors duration-100">
+      <div class="group bg-white dark:bg-stone-900 rounded-2xl p-6 border border-stone-100 dark:border-stone-800 shadow-sm hover:shadow-lg transition-all duration-300 ease-out hover:scale-[1.01] hover:-translate-y-0.5 cursor-pointer">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-stone-500 dark:text-stone-400">Entradas Hoy</p>
-            <p class="text-3xl font-bold text-emerald-700 dark:text-emerald-600 mt-2">{{ todayEntradas() }}</p>
+            <p class="text-3xl font-bold text-emerald-700 dark:text-emerald-600 mt-2 group-hover:scale-105 transition-transform duration-200 ease-out transform-gpu">{{ todayEntradas() }}</p>
           </div>
           <div class="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center">
-            <span class="material-icons-outlined text-2xl text-emerald-700 dark:text-emerald-600">arrow_downward</span>
+            <span class="material-icons-outlined text-2xl text-emerald-700 dark:text-emerald-600 group-hover:rotate-6 group-hover:scale-110 transition-transform duration-200 ease-out">arrow_downward</span>
           </div>
         </div>
       </div>
 
-      <div class="bg-white dark:bg-stone-900 rounded-2xl p-6 border border-stone-100 dark:border-stone-800 shadow-sm transition-colors duration-100">
+      <div class="group bg-white dark:bg-stone-900 rounded-2xl p-6 border border-stone-100 dark:border-stone-800 shadow-sm hover:shadow-lg transition-all duration-300 ease-out hover:scale-[1.01] hover:-translate-y-0.5 cursor-pointer">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-stone-500 dark:text-stone-400">Ajustes Hoy</p>
-            <p class="text-3xl font-bold text-sky-700 dark:text-sky-600 mt-2">{{ todayAjustes() }}</p>
+            <p class="text-3xl font-bold text-sky-700 dark:text-sky-600 mt-2 group-hover:scale-105 transition-transform duration-200 ease-out transform-gpu">{{ todayAjustes() }}</p>
           </div>
           <div class="w-14 h-14 rounded-xl bg-sky-50 dark:bg-sky-950/20 flex items-center justify-center">
-            <span class="material-icons-outlined text-2xl text-sky-700 dark:text-sky-600">tune</span>
+            <span class="material-icons-outlined text-2xl text-sky-700 dark:text-sky-600 group-hover:rotate-6 group-hover:scale-110 transition-transform duration-200 ease-out">tune</span>
           </div>
         </div>
       </div>
@@ -79,7 +79,7 @@
             [class.dark:bg-stone-800]="selectedTab() !== 'all'"
             [class.text-stone-600]="selectedTab() !== 'all'"
             [class.dark:text-stone-300]="selectedTab() !== 'all'"
-            class="px-4 py-2 rounded-xl text-sm font-medium transition-colors duration-100"
+            class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ease-out hover:scale-[1.02] active:scale-95"
           >
             Todos
           </button>
