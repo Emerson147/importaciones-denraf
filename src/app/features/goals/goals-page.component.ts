@@ -27,10 +27,10 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
           <!-- Nivel -->
           <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
             <div class="flex items-start justify-between mb-4">
-              <div class="h-10 w-10 rounded-xl bg-violet-500 dark:bg-violet-600 flex items-center justify-center text-white transition-colors duration-100">
+              <div class="h-10 w-10 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900 transition-colors duration-100">
                 <span class="material-icons-outlined text-lg">military_tech</span>
               </div>
-              <span class="text-xs font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-1 rounded-full">
+              <span class="text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded-full">
                 Nivel
               </span>
             </div>
@@ -48,10 +48,10 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
           <!-- Puntos Totales -->
           <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
             <div class="flex items-start justify-between mb-4">
-              <div class="h-10 w-10 rounded-xl bg-amber-500 dark:bg-amber-600 flex items-center justify-center text-white transition-colors duration-100">
+              <div class="h-10 w-10 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900 transition-colors duration-100">
                 <span class="material-icons-outlined text-lg">stars</span>
               </div>
-              <span class="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-full">
+              <span class="text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded-full">
                 Total
               </span>
             </div>
@@ -69,10 +69,10 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
           <!-- Racha Actual -->
           <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
             <div class="flex items-start justify-between mb-4">
-              <div class="h-10 w-10 rounded-xl bg-orange-500 dark:bg-orange-600 flex items-center justify-center text-white transition-colors duration-100">
+              <div class="h-10 w-10 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900 transition-colors duration-100">
                 <span class="material-icons-outlined text-lg">local_fire_department</span>
               </div>
-              <span class="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
+              <span class="text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded-full">
                 Racha
               </span>
             </div>
@@ -90,10 +90,10 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
           <!-- Logros Desbloqueados -->
           <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-6 hover:shadow-md transition-all">
             <div class="flex items-start justify-between mb-4">
-              <div class="h-10 w-10 rounded-xl bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center text-white transition-colors duration-100">
+              <div class="h-10 w-10 rounded-xl bg-stone-900 dark:bg-stone-100 flex items-center justify-center text-white dark:text-stone-900 transition-colors duration-100">
                 <span class="material-icons-outlined text-lg">emoji_events</span>
               </div>
-              <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
+              <span class="text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded-full">
                 Logros
               </span>
             </div>
@@ -129,19 +129,7 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
                     </p>
                   </div>
                   
-                  <span class="px-3 py-1 rounded-full text-xs font-medium flex-shrink-0"
-                        [class.bg-blue-50]="goal.type === 'daily'"
-                        [class.text-blue-700]="goal.type === 'daily'"
-                        [class.dark:bg-blue-900/30]="goal.type === 'daily'"
-                        [class.dark:text-blue-300]="goal.type === 'daily'"
-                        [class.bg-purple-50]="goal.type === 'weekly'"
-                        [class.text-purple-700]="goal.type === 'weekly'"
-                        [class.dark:bg-purple-900/30]="goal.type === 'weekly'"
-                        [class.dark:text-purple-300]="goal.type === 'weekly'"
-                        [class.bg-emerald-50]="goal.type === 'monthly'"
-                        [class.text-emerald-700]="goal.type === 'monthly'"
-                        [class.dark:bg-emerald-900/30]="goal.type === 'monthly'"
-                        [class.dark:text-emerald-300]="goal.type === 'monthly'">
+                  <span class="px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
                     {{ goalTypeLabel(goal.type) }}
                   </span>
                 </div>
@@ -157,7 +145,7 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
                   </div>
                   
                   <div class="h-2 rounded-full overflow-hidden bg-stone-200 dark:bg-stone-800">
-                    <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300"
+                    <div class="h-full bg-emerald-500 dark:bg-emerald-600 transition-all duration-300"
                          [style.width.%]="goalProgress(goal.current, goal.target)"></div>
                   </div>
                 </div>
@@ -187,23 +175,7 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
                      [class.opacity-60]="!achievement.unlocked">
                   
                   <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
-                         [class.bg-amber-100]="achievement.tier === 'bronze'"
-                         [class.text-amber-700]="achievement.tier === 'bronze'"
-                         [class.dark:bg-amber-900/30]="achievement.tier === 'bronze'"
-                         [class.dark:text-amber-300]="achievement.tier === 'bronze'"
-                         [class.bg-slate-100]="achievement.tier === 'silver'"
-                         [class.text-slate-700]="achievement.tier === 'silver'"
-                         [class.dark:bg-slate-900/30]="achievement.tier === 'silver'"
-                         [class.dark:text-slate-300]="achievement.tier === 'silver'"
-                         [class.bg-yellow-100]="achievement.tier === 'gold'"
-                         [class.text-yellow-700]="achievement.tier === 'gold'"
-                         [class.dark:bg-yellow-900/30]="achievement.tier === 'gold'"
-                         [class.dark:text-yellow-300]="achievement.tier === 'gold'"
-                         [class.bg-purple-100]="achievement.tier === 'platinum'"
-                         [class.text-purple-700]="achievement.tier === 'platinum'"
-                         [class.dark:bg-purple-900/30]="achievement.tier === 'platinum'"
-                         [class.dark:text-purple-300]="achievement.tier === 'platinum'">
+                    <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
                       <span class="material-icons-outlined text-2xl">{{ achievement.icon }}</span>
                     </div>
                     
@@ -218,7 +190,7 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
                       @if (!achievement.unlocked) {
                         <div class="space-y-1">
                           <div class="h-1.5 rounded-full overflow-hidden bg-stone-200 dark:bg-stone-800">
-                            <div class="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
+                            <div class="h-full bg-stone-400 dark:bg-stone-600 transition-all duration-300"
                                  [style.width.%]="achievementProgress(achievement.progress, achievement.requirement)"></div>
                           </div>
                           <p class="text-xs text-stone-500 dark:text-stone-500">
