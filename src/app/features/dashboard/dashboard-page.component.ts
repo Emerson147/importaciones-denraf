@@ -13,6 +13,7 @@ import {
 import { ToastService } from '../../core/services/toast.service';
 import { SalesService } from '../../core/services/sales.service';
 import { AnalyticsService } from '../../core/services/analytics.service';
+import { Sale } from '../../core/models';
 import { ApexChartConfigService } from '../../core/services/apex-chart-config.service';
 import { InventoryMovementService } from '../../core/services/inventory-movement.service';
 import { AlertService } from '../../core/services/alert.service';

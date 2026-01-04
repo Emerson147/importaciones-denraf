@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UiInputComponent } from '../../shared/ui/ui-input/ui-input.component';
 import { UiButtonComponent } from '../../shared/ui/ui-button/ui-button.component';
