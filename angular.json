@@ -56,8 +56,7 @@
               },
               "sourceMap": false,
               "extractLicenses": true,
-              "namedChunks": false,
-              "vendorChunk": true
+              "namedChunks": false
             },
             "development": {
               "optimization": false,
