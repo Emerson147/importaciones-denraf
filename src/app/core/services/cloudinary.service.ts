@@ -234,4 +234,76 @@ export class CloudinaryService {
       isConfigured: this.isConfigured(),
     };
   }
+
+  /**
+   * 🚀 OPTIMIZACIÓN DE IMÁGENES PARA PERFORMANCE
+   * 
+   * Genera URL optimizada con formato automático, calidad y dimensiones
+   * 
+   * @param url URL original de Cloudinary
+   * @param width Ancho deseado en píxeles (default: 400)
+   * @param format Formato de imagen ('auto' usa el mejor formato: WebP/AVIF)
+   * @param quality Calidad de imagen ('auto' optimiza automáticamente)
+   * @returns URL optimizada para web
+   * 
+   * Ejemplo:
+   * ```typescript
+   * // Antes: https://res.cloudinary.com/.../image.jpg (2MB)
+   * const optimized = cloudinary.getOptimizedUrl(url, 400);
+   * // Después: https://res.cloudinary.com/.../f_auto,w_400,q_auto/image.jpg (50KB)
+   * ```
+   */
+  getOptimizedUrl(
+    url: string, 
+    width = 400, 
+    format: 'auto' | 'webp' | 'avif' | 'jpg' = 'auto',
+    quality: 'auto' | 'best' | 'good' | 'eco' = 'auto'
+  ): string {
+    if (!url) return '';
+    
+    // Si no es URL de Cloudinary, retornar original
+    if (!isCloudinaryUrl(url)) return url;
+
+    // Si ya tiene transformaciones, retornar original (evitar duplicados)
+    if (url.includes('f_auto') || url.includes('w_')) return url;
+
+    try {
+      // Construir transformaciones de Cloudinary
+      const transformations = [
+        `f_${format}`,      // Formato automático (WebP/AVIF)
+        `w_${width}`,       // Ancho
+        `q_${quality}`,     // Calidad automática
+        'c_fill',           // Crop para llenar dimensiones
+        'g_auto'            // Enfoque automático (rostros, objetos)
+      ].join(',');
+
+      // Insertar transformaciones en la URL
+      // De: https://res.cloudinary.com/cloud/image/upload/v123/folder/image.jpg
+      // A:  https://res.cloudinary.com/cloud/image/upload/f_auto,w_400,q_auto,c_fill,g_auto/v123/folder/image.jpg
+      const parts = url.split('/upload/');
+      if (parts.length === 2) {
+        return `${parts[0]}/upload/${transformations}/${parts[1]}`;
+      }
+
+      return url;
+    } catch (error) {
+      console.warn('⚠️ Error optimizando URL de imagen:', error);
+      return url;
+    }
+  }
+
+  /**
+   * 🖼️ Generar URLs optimizadas para diferentes tamaños
+   * Útil para <picture> con múltiples sources
+   */
+  getResponsiveUrls(url: string) {
+    return {
+      thumbnail: this.getOptimizedUrl(url, 150),  // 150px
+      small: this.getOptimizedUrl(url, 400),      // 400px
+      medium: this.getOptimizedUrl(url, 800),     // 800px
+      large: this.getOptimizedUrl(url, 1200),     // 1200px
+      avif: this.getOptimizedUrl(url, 400, 'avif'),
+      webp: this.getOptimizedUrl(url, 400, 'webp'),
+    };
+  }
 }

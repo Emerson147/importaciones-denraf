@@ -14,6 +14,7 @@ import { ApexOptions } from 'ng-apexcharts';
   standalone: true,
   imports: [CommonModule, NgApexchartsModule, UiButtonComponent, UiExportMenuComponent],
   templateUrl: './reports-page.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
 })
 export class ReportsPageComponent {
   private authService = inject(AuthService);
@@ -693,5 +694,18 @@ export class ReportsPageComponent {
       console.error('Error exportando reporte completo:', error);
       alert('Error al generar reporte. Intenta con las opciones de exportación individual.');
     }
+  }
+
+  // 🚀 FUNCIONES TRACKBY PARA OPTIMIZACIÓN DE PERFORMANCE
+  trackByProductName(_index: number, product: any): string {
+    return product.name;
+  }
+
+  trackByVendorId(_index: number, vendor: any): string {
+    return vendor.id || vendor.name;
+  }
+
+  trackByIndex(index: number): number {
+    return index;
   }
 }

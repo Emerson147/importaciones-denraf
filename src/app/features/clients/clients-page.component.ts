@@ -27,6 +27,7 @@ interface Client {
   standalone: true,
   imports: [CommonModule, UiInputComponent, UiButtonComponent, UiBadgeComponent, UiAnimatedDialogComponent, UiLabelComponent],
   templateUrl: './clients-page.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
 })
 export class ClientsPageComponent {
   

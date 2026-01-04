@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UiPageHeaderComponent } from '../../../shared/ui/ui-page-header/ui-page-header.component';
 import { UiEmptyStateComponent } from '../../../shared/ui/ui-empty-state/ui-empty-state.component';
@@ -13,6 +13,7 @@ import { Sale } from '../../../core/models';
   standalone: true,
   imports: [CommonModule, UiPageHeaderComponent, UiEmptyStateComponent, UiExportMenuComponent],
   templateUrl: './sales-history.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
 })
 export class SalesHistoryComponent {
   private salesService = inject(SalesService);
@@ -179,5 +180,14 @@ export class SalesHistoryComponent {
       'user-3': 'bg-green-100 text-green-700'
     };
     return colors[vendedorId] || 'bg-stone-100 text-stone-700';
+  }
+
+  // 🚀 FUNCIONES TRACKBY PARA OPTIMIZACIÓN DE PERFORMANCE
+  trackBySaleId(_index: number, sale: Sale): string {
+    return sale.id;
+  }
+
+  trackByVendor(_index: number, vendor: string): string {
+    return vendor;
   }
 }

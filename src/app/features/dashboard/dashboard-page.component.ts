@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject } from '@angular/core';
+import { Component, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { 
@@ -46,6 +46,7 @@ interface Product {
     PeriodSelectorComponent,
   ],
   templateUrl: './dashboard-page.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
 })
 export class DashboardPageComponent {
   private toastService = inject(ToastService);
@@ -329,5 +330,18 @@ export class DashboardPageComponent {
     
     // Actualizar el período en AnalyticsService para que todos los computed se recalculen
     this.analyticsService.setPeriod(period.startDate, period.endDate);
+  }
+
+  // 🚀 FUNCIONES TRACKBY PARA OPTIMIZACIÓN DE PERFORMANCE
+  trackBySaleId(_index: number, sale: Sale): string {
+    return sale.id;
+  }
+
+  trackByProductName(_index: number, product: any): string {
+    return product.name;
+  }
+
+  trackByLowStockProduct(_index: number, product: any): string {
+    return product.name + product.category;
   }
 }

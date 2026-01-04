@@ -1321,4 +1321,17 @@ export class PosPageComponent {
       this.showToast.set(false);
     }, 3000);
   }
+
+  // 🚀 FUNCIONES TRACKBY PARA OPTIMIZACIÓN DE PERFORMANCE
+  trackByProductId(_index: number, product: Product): string {
+    return product.id;
+  }
+
+  trackByCartItemId(_index: number, item: CartItem): string {
+    return item.product.id + (item.variant?.size || '') + (item.variant?.color || '');
+  }
+
+  trackByCategory(_index: number, category: string): string {
+    return category;
+  }
 }
