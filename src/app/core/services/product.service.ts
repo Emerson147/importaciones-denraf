@@ -476,7 +476,15 @@ export class ProductService {
 
         this.productsSignal.update((products) => [...products, newProduct]);
 
-        // 🔄 Sincronizar con Supabase
+        // � Debug: Ver variantes antes de sincronizar
+        console.log('🔍 Nuevo producto a sincronizar:', {
+          id: newProduct.id,
+          name: newProduct.name,
+          variants: newProduct.variants,
+          variantsCount: newProduct.variants?.length || 0
+        });
+
+        // �🔄 Sincronizar con Supabase
         this.syncService.queueForSync('product', 'create', newProduct);
         this.localDb.saveProduct(newProduct);
 
@@ -511,7 +519,15 @@ export class ProductService {
 
           this.productsSignal.set(updatedProducts);
 
-          // 🔄 Sincronizar con Supabase
+          // � Debug: Ver variantes antes de sincronizar
+          console.log('🔍 Producto a sincronizar:', {
+            id: updatedProducts[index].id,
+            name: updatedProducts[index].name,
+            variants: updatedProducts[index].variants,
+            variantsCount: updatedProducts[index].variants?.length || 0
+          });
+
+          // �🔄 Sincronizar con Supabase
           this.syncService.queueForSync('product', 'update', updatedProducts[index]);
           this.localDb.saveProduct(updatedProducts[index]);
           return true;

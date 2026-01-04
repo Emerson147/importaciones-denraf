@@ -137,7 +137,7 @@ export class ProductosPageComponent {
     } else {
       // Si no hay variantes, crear una por defecto
       this.variants.set([{
-        id: `S-Negro-${Date.now()}`,
+        id: crypto.randomUUID(), // ✅ UUID válido
         size: 'S',
         color: 'Negro',
         stock: product.stock || 0,
@@ -161,7 +161,7 @@ export class ProductosPageComponent {
     this.selectedImage.set(null);
     // Inicializar con una variante por defecto
     this.variants.set([{
-      id: `S-Negro-${Date.now()}`,
+      id: crypto.randomUUID(), // ✅ UUID válido
       size: 'S',
       color: 'Negro',
       stock: 0,
@@ -183,7 +183,7 @@ export class ProductosPageComponent {
     if (!hasSizeAlready) {
       // Agregar una variante con el primer color por defecto
       const newVariant: ProductVariant = {
-        id: `${size}-Negro-${Date.now()}`,
+        id: crypto.randomUUID(), // ✅ UUID válido
         size,
         color: 'Negro',
         stock: 0,
@@ -206,7 +206,7 @@ export class ProductosPageComponent {
     if (filtered.length === 0) {
       // Si se eliminan todas, mantener al menos una variante
       this.variants.set([{
-        id: `S-Negro-${Date.now()}`,
+        id: crypto.randomUUID(), // ✅ UUID válido
         size: 'S',
         color: 'Negro',
         stock: 0,
@@ -236,7 +236,7 @@ export class ProductosPageComponent {
     
     if (!exists) {
       const newVariant: ProductVariant = {
-        id: `${activeSize}-${color}-${Date.now()}`,
+        id: crypto.randomUUID(), // ✅ UUID válido
         size: activeSize,
         color,
         stock: 0,

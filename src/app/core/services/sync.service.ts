@@ -113,13 +113,23 @@ export class SyncService {
       switch (item.action) {
         case 'create':
         case 'update':
+          // Guardar producto principal
           const { error: upsertError } = await supabase.from(table).upsert(adaptedData);
           if (upsertError) throw upsertError;
+
+          // 🔥 Si es un producto con variantes, sincronizar variantes en tabla separada
+          if (item.type === 'product' && item.data.variants && item.data.variants.length > 0) {
+            console.log(`🔄 Sincronizando ${item.data.variants.length} variantes para producto ${item.data.id}...`);
+            await this.syncProductVariants(item.data.id, item.data.variants);
+          } else if (item.type === 'product') {
+            console.log('⚠️ Producto sin variantes o variantes vacías:', item.data.id);
+          }
           break;
 
         case 'delete':
           const { error: deleteError } = await supabase.from(table).delete().eq('id', item.data.id);
           if (deleteError) throw deleteError;
+          // Las variantes se eliminan automáticamente por CASCADE
           break;
       }
 
@@ -145,7 +155,43 @@ export class SyncService {
   }
 
   /**
-   * 🔄 Adaptar datos de Angular a formato Supabase
+   * � Sincronizar variantes de un producto en tabla separada
+   */
+  private async syncProductVariants(productId: string, variants: any[]): Promise<void> {
+    console.log(`🔥 SYNC VARIANTES - Producto: ${productId}, Cantidad: ${variants.length}`, variants);
+    try {
+      // 1. Eliminar variantes existentes del producto
+      await supabase
+        .from('variantes')
+        .delete()
+        .eq('product_id', productId);
+
+      // 2. Insertar nuevas variantes
+      if (variants.length > 0) {
+        const variantesData = variants.map(v => ({
+          id: v.id, // Mantener el ID generado en el cliente
+          product_id: productId,
+          size: v.size,
+          color: v.color || null,
+          stock: v.stock || 0,
+          barcode: v.barcode || null
+        }));
+
+        const { error } = await supabase
+          .from('variantes')
+          .insert(variantesData);
+
+        if (error) throw error;
+        console.log(`✅ ${variants.length} variantes sincronizadas para producto ${productId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error sincronizando variantes:`, error);
+      throw error; // Re-lanzar para que syncItem maneje el error
+    }
+  }
+
+  /**
+   * �🔄 Adaptar datos de Angular a formato Supabase
    * Angular usa camelCase, Supabase usa snake_case
    */
   private adaptToSupabase(type: string, data: any): any {
@@ -161,6 +207,7 @@ export class SyncService {
         min_stock: data.minStock,
         sizes: data.sizes,
         colors: data.colors,
+        // variants NO va aquí - se guarda en tabla separada
         image: data.image,
         barcode: data.barcode,
         status: data.status || 'active',
@@ -256,7 +303,12 @@ export class SyncService {
       console.log('📦 Intentando carga completa de productos...');
       const { data: productosRaw, error: prodError } = await supabase
         .from('productos')
-        .select('id, name, category, brand, price, cost, stock, min_stock, sizes, colors, image, barcode, status, created_at, updated_at')
+        .select(`
+          id, name, category, brand, price, cost, stock, min_stock, sizes, colors, image, barcode, status, created_at, updated_at,
+          variantes (
+            id, size, color, stock, barcode
+          )
+        `)
         .limit(5000);
 
       if (!prodError && productosRaw && productosRaw.length > 0) {
@@ -300,7 +352,12 @@ export class SyncService {
       while (hasMore) {
         const { data, error } = await supabase
           .from('productos')
-          .select('id, name, category, brand, price, cost, stock, status')
+          .select(`
+            id, name, category, brand, price, cost, stock, status,
+            variantes (
+              id, size, color, stock, barcode
+            )
+          `)
           .range(offset, offset + batchSize - 1);
 
         if (error) {
@@ -403,6 +460,17 @@ export class SyncService {
    */
   private adaptFromSupabase(type: string, data: any): any {
     if (type === 'product') {
+      // Mapear variantes desde la relación (tabla variantes)
+      const variants = data.variantes 
+        ? data.variantes.map((v: any) => ({
+            id: v.id,
+            size: v.size,
+            color: v.color || '',
+            stock: v.stock || 0,
+            barcode: v.barcode || ''
+          }))
+        : [];
+
       return {
         id: data.id,
         name: data.name,
@@ -414,6 +482,7 @@ export class SyncService {
         minStock: data.min_stock || 5,
         sizes: data.sizes || [],
         colors: data.colors || [],
+        variants: variants, // 🔥 Variantes mapeadas desde tabla relacional
         image: data.image,
         barcode: data.barcode,
         status: data.status || 'active',
@@ -494,7 +563,12 @@ export class SyncService {
     try {
       const { data, error } = await supabase
         .from('productos')
-        .select('id, name, category, brand, price, cost, stock, min_stock, sizes, colors, image, barcode, status')
+        .select(`
+          id, name, category, brand, price, cost, stock, min_stock, sizes, colors, image, barcode, status,
+          variantes (
+            id, size, color, stock, barcode
+          )
+        `)
         .eq('category', category)
         .eq('status', 'active')
         .order('name');
@@ -517,7 +591,12 @@ export class SyncService {
     try {
       const { data, error } = await supabase
         .from('productos')
-        .select('id, name, category, brand, price, stock, image, barcode')
+        .select(`
+          id, name, category, brand, price, stock, image, barcode,
+          variantes (
+            id, size, color, stock, barcode
+          )
+        `)
         .eq('status', 'active')
         .or(`name.ilike.%${query}%,barcode.eq.${query},brand.ilike.%${query}%`)
         .limit(20);
