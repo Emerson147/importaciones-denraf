@@ -40,6 +40,7 @@ export interface Sale {
   total: number;
   paymentMethod: 'cash' | 'card' | 'transfer' | 'yape' | 'plin';
   status: 'completed' | 'pending' | 'cancelled';
+  saleType: 'feria-acobamba' | 'feria-paucara' | 'tienda'; // 🎯 Tipo de venta
   customer?: Customer;
   notes?: string;
   createdBy: string; // Usuario que hizo la venta

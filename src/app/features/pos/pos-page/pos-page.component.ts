@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject, HostListener, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, signal, inject, HostListener, ViewChild, ElementRef, ChangeDetectionStrategy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UiTicketComponent } from '../../../shared/ui/ui-ticket/ui-ticket.component';
@@ -12,6 +12,7 @@ import { LoggerService } from '../../../core/services/logger.service';
 import { Sale, SaleItem, Product, ProductVariant } from '../../../core/models';
 import { UiAnimatedDialogComponent } from '../../../shared/ui/ui-animated-dialog/ui-animated-dialog.component';
 import { ImageFallbackDirective } from '../../../shared/directives/image-fallback.directive';
+import { PosPaymentFacade } from '../facades/pos-payment.facade';
 
 export interface CartItem {
   product: Product;
@@ -530,7 +531,7 @@ export interface CartItem {
 
           <!-- Footer -->
           <div class="p-4 bg-stone-50 border-t border-stone-100 space-y-3 shadow-xl">
-            @if (showClientForm()) {
+             @if (showClientForm()) {
               <div class="p-3 bg-white rounded-xl border border-stone-200 shadow-sm space-y-2">
                 <div class="flex items-center justify-between">
                   <h3 class="text-xs font-bold text-stone-700">Cliente</h3>
@@ -849,6 +850,9 @@ export class PosPageComponent {
   toastMessage = signal('');
   toastIcon = signal('check_circle');
   showMobileCart = signal(false); // 📱 Control del bottom sheet móvil
+  
+  // 🎯 Tipo de venta (auto-detectado por día)
+  saleType = signal<'feria-acobamba' | 'feria-paucara' | 'tienda'>('tienda');
 
   // 🔄 Estado de carga conectado al ProductService
   loading = computed(() => this.productService.isLoading());
@@ -860,6 +864,26 @@ export class PosPageComponent {
     setTimeout(() => {
       this.searchInput?.nativeElement?.focus();
     }, 200);
+    
+    // 🎯 Auto-detectar tipo de venta basado en el día
+    this.autoDetectSaleType();
+  }
+  
+  // Auto-detectar tipo de venta por día de la semana
+  autoDetectSaleType(): void {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    if (dayOfWeek === 4) {
+      this.saleType.set('feria-acobamba');
+      this.logger.log('🎯 Tipo de venta: Feria Acobamba (Jueves)');
+    } else if (dayOfWeek === 0) {
+      this.saleType.set('feria-paucara');
+      this.logger.log('🎯 Tipo de venta: Feria Paucara (Domingo)');
+    } else {
+      this.saleType.set('tienda');
+      this.logger.log('🎯 Tipo de venta: Tienda Paucara');
+    }
   }
 
   // 🔥 ATAJOS DE TECLADO PROFESIONALES
@@ -901,6 +925,7 @@ export class PosPageComponent {
   paymentMethod = '';
   amountPaid = 0;
   discount = 0; // Descuento aplicado
+  currentSale: Sale | null = null; // Venta actual para el ticket
 
   // Selector de variantes
   variantSelectorOpen = signal(false);
@@ -1184,6 +1209,9 @@ export class PosPageComponent {
     this.discount = 0;
     this.showClientForm.set(false);
     this.currentTicketNumber++;
+    
+    // 🎯 Auto-detectar tipo de venta para la próxima
+    this.autoDetectSaleType();
   }
 
   completeSale() {
@@ -1220,6 +1248,7 @@ export class PosPageComponent {
       total: total - this.discount,
       paymentMethod: this.getPaymentMethodType(),
       status: 'completed' as const,
+      saleType: this.saleType(), // 🎯 Tipo de venta registrado
       customer: this.clientName !== 'Cliente' ? {
         id: `CLI-${Date.now()}`,
         name: this.clientName,

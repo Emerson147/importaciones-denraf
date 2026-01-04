@@ -45,6 +45,7 @@ export class PosPaymentFacade {
   private discountSignal = signal<number>(0);
   private showTicketSignal = signal<boolean>(false);
   private currentTicketNumberSignal = signal<number>(4031);
+  private saleTypeSignal = signal<'feria-acobamba' | 'feria-paucara' | 'tienda'>('tienda');
   
   // Exposición readonly
   readonly paymentMethod = this.paymentMethodSignal.asReadonly();
@@ -52,6 +53,7 @@ export class PosPaymentFacade {
   readonly discount = this.discountSignal.asReadonly();
   readonly showTicket = this.showTicketSignal.asReadonly();
   readonly currentTicketNumber = this.currentTicketNumberSignal.asReadonly();
+  readonly saleType = this.saleTypeSignal.asReadonly();
   
   // Estado de conexión
   readonly isOnline = this.offlineService.isOnline;
@@ -89,6 +91,33 @@ export class PosPaymentFacade {
    */
   setDiscount(discount: number): void {
     this.discountSignal.set(Math.max(0, discount));
+  }
+
+  /**
+   * Establecer tipo de venta
+   * @param type Tipo de venta (feria-acobamba, feria-paucara, tienda)
+   */
+  setSaleType(type: 'feria-acobamba' | 'feria-paucara' | 'tienda'): void {
+    this.saleTypeSignal.set(type);
+  }
+
+  /**
+   * Auto-detectar tipo de venta basado en el día actual
+   * Jueves (4) → Feria Acobamba
+   * Domingo (0) → Feria Paucara
+   * Otros días → Tienda
+   */
+  autoDetectSaleType(): void {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    if (dayOfWeek === 4) {
+      this.saleTypeSignal.set('feria-acobamba');
+    } else if (dayOfWeek === 0) {
+      this.saleTypeSignal.set('feria-paucara');
+    } else {
+      this.saleTypeSignal.set('tienda');
+    }
   }
 
   /**
@@ -165,6 +194,7 @@ export class PosPaymentFacade {
       total,
       paymentMethod,
       status: 'completed',
+      saleType: this.saleTypeSignal(), // 🎯 Tipo de venta registrado
       customer: customerData.name !== 'Cliente' ? {
         id: `CLI-${Date.now()}`,
         name: customerData.name || 'Cliente',
@@ -222,13 +252,14 @@ export class PosPaymentFacade {
   }
 
   /**
-   * Resetear estado del pago
+   * Resetear estado del pago y auto-detectar tipo de venta
    */
   reset(): void {
     this.paymentMethodSignal.set(null);
     this.clearCustomerData();
     this.discountSignal.set(0);
     this.showTicketSignal.set(false);
+    this.autoDetectSaleType(); // 🎯 Auto-detectar tipo para próxima venta
   }
 
   /**
