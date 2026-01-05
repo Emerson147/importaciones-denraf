@@ -30,7 +30,7 @@
           <app-ui-input
             placeholder="Buscar producto o categoría..."
             class="max-w-md bg-stone-50 border-transparent rounded-xl"
-            (valueChange)="searchQuery.set($event)"
+            (valueChange)="onSearchChange($event)"
           ></app-ui-input>
           
           <div class="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
@@ -40,16 +40,21 @@
         </div>
       </div>
 
-      <!-- Grid de Productos (Vista Mejorada) -->
+      <!-- Grid de Productos (Vista Mejorada con Virtual Scrolling) -->
       <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <!-- 🚀 Virtual Scroll Viewport: Solo renderiza items visibles -->
+        <cdk-virtual-scroll-viewport 
+          [itemSize]="320" 
+          class="h-[calc(100vh-280px)]"
+          style="width: 100%; contain: strict;">
           
-          @for (product of filteredProducts(); track product.id) {
-            <div class="group bg-stone-50 rounded-2xl border border-stone-100 overflow-hidden hover:border-stone-300 hover:scale-[1.01] hover:-translate-y-1 transition-all duration-300 ease-out cursor-pointer shadow-sm hover:shadow-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            @for (product of filteredProducts(); track product.id) {
+              <div class="group bg-stone-50 rounded-2xl border border-stone-100 overflow-hidden hover:border-stone-300 hover:scale-[1.01] hover:-translate-y-1 transition-all duration-300 ease-out cursor-pointer shadow-sm hover:shadow-lg">
               
               <!-- Imagen del producto -->
               <div class="relative h-48 bg-stone-200 overflow-hidden">
-                <img [src]="product.image" appImageFallback class="w-full h-full object-cover" [alt]="product.name">
+                <img [src]="product.image" appImageFallback loading="lazy" class="w-full h-full object-cover" [alt]="product.name">
                 
                 <!-- Badge de stock bajo -->
                 @if (product.stock <= product.minStock) {
@@ -152,7 +157,9 @@
             </div>
           }
 
-        </div>
+          </div>
+        </cdk-virtual-scroll-viewport>
+        <!-- 🚀 Fin Virtual Scroll -->
       </div>
 
     </div>

@@ -1,14 +1,14 @@
-import { Component, computed, signal, inject } from '@angular/core';
+import { Component, computed, signal, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgApexchartsModule } from 'ng-apexcharts';
+import { NgApexchartsModule, ApexOptions } from 'ng-apexcharts';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { ProductService } from '../../../core/services/product.service';
 import { ApexChartConfigService } from '../../../core/services/apex-chart-config.service';
-import { ApexOptions } from 'ng-apexcharts';
 
 @Component({
   selector: 'app-analisis-page',
   standalone: true,
+  // 🚀 Code-splitting: Esta ruta se lazy-loadea automáticamente en app.routes.ts
   imports: [
     CommonModule,
     NgApexchartsModule,
@@ -17,6 +17,7 @@ import { ApexOptions } from 'ng-apexcharts';
   styleUrls: ['./analisis-page.component.css']
 })
 export class AnalisisPageComponent {
+  private destroyRef = inject(DestroyRef);
   private inventoryService = inject(InventoryService);
   private productService = inject(ProductService);
   private apexConfigService = inject(ApexChartConfigService);

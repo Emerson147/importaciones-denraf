@@ -1,17 +1,17 @@
-import { Component, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgApexchartsModule } from 'ng-apexcharts';
+import { NgApexchartsModule, ApexOptions } from 'ng-apexcharts';
 import { UiButtonComponent } from '../../shared/ui/ui-button/ui-button.component';
 import { UiExportMenuComponent } from '../../shared/ui/ui-export-menu/ui-export-menu.component';
 import { AuthService } from '../../core/auth/auth';
 import { SalesService } from '../../core/services/sales.service';
 import { ProductService } from '../../core/services/product.service';
 import { ApexChartConfigService } from '../../core/services/apex-chart-config.service';
-import { ApexOptions } from 'ng-apexcharts';
 
 @Component({
   selector: 'app-reports-page',
   standalone: true,
+  // 🚀 NgApexchartsModule está aquí pero Angular hará code-splitting automático al ser standalone + lazy route
   imports: [CommonModule, NgApexchartsModule, UiButtonComponent, UiExportMenuComponent],
   templateUrl: './reports-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
@@ -21,6 +21,7 @@ export class ReportsPageComponent {
   private salesService = inject(SalesService);
   private productService = inject(ProductService);
   private apexConfigService = inject(ApexChartConfigService);
+  private destroyRef = inject(DestroyRef);
   
   // Ventas de los últimos 7 días (DATOS REALES) - Separando ingresos y ganancias
   weeklySalesData = computed(() => {

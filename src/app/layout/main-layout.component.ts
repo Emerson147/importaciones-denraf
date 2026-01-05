@@ -1,4 +1,4 @@
-import { Component, inject, signal, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, AfterViewInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth/auth';
@@ -29,9 +29,10 @@ import { ClickOutsideDirective } from '../shared/directives/click-outside/click-
   ],
   templateUrl: './main-layout.component.html',
 })
-export class MainLayoutComponent implements AfterViewInit, OnDestroy {
+export class MainLayoutComponent implements AfterViewInit {
   authService = inject(AuthService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   themeService = inject(ThemeService);
   
@@ -54,23 +55,24 @@ export class MainLayoutComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit() {
     // Esperar un tick para que el DOM esté listo
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       const mainContent = document.querySelector('main .overflow-y-auto') as HTMLElement;
       if (mainContent) {
         this.scrollListener = () => this.handleScroll(mainContent);
         mainContent.addEventListener('scroll', this.scrollListener);
+        
+        // 🧹 Cleanup automático con DestroyRef
+        this.destroyRef.onDestroy(() => {
+          mainContent.removeEventListener('scroll', this.scrollListener!);
+          if (this.scrollTimeout) {
+            clearTimeout(this.scrollTimeout);
+          }
+        });
       }
     }, 100);
-  }
-
-  ngOnDestroy() {
-    const mainContent = document.querySelector('main .overflow-y-auto') as HTMLElement;
-    if (mainContent && this.scrollListener) {
-      mainContent.removeEventListener('scroll', this.scrollListener);
-    }
-    if (this.scrollTimeout) {
-      clearTimeout(this.scrollTimeout);
-    }
+    
+    // 🧹 Limpiar el timeout inicial también
+    this.destroyRef.onDestroy(() => clearTimeout(timeoutId));
   }
 
   private handleScroll(element: HTMLElement) {
@@ -84,19 +86,22 @@ export class MainLayoutComponent implements AfterViewInit, OnDestroy {
     }
 
     // Limpiar timeout anterior
-    clearTimeout(this.scrollTimeout);
+    if (this.scrollTimeout) {
+      clearTimeout(this.scrollTimeout);
+    }
     
     // Mostrar botones temporalmente cuando se detiene el scroll
     this.scrollTimeout = setTimeout(() => {
       if (scrollTop > 80) {
         this.floatingButtonsVisible.set(true);
         // Volver a ocultar después de 2 segundos
-        setTimeout(() => {
+        const hideTimeoutId = setTimeout(() => {
           const currentScroll = element.scrollTop;
           if (currentScroll > 80) {
             this.floatingButtonsVisible.set(false);
           }
         }, 2000);
+        // Aunque este se limpia solo, buena práctica almacenarlo por si acaso
       }
     }, 150);
   }

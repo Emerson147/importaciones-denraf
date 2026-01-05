@@ -1,6 +1,7 @@
-import { Component, computed, signal, inject, HostListener, ViewChild, ElementRef, ChangeDetectionStrategy, effect } from '@angular/core';
+import { Component, computed, signal, inject, HostListener, ViewChild, ElementRef, ChangeDetectionStrategy, effect, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ScrollingModule } from '@angular/cdk/scrolling'; // 🚀 Virtual Scrolling
 import { UiTicketComponent } from '../../../shared/ui/ui-ticket/ui-ticket.component';
 import { UiSkeletonComponent } from '../../../shared/ui';
 import { SalesService } from '../../../core/services/sales.service';
@@ -23,7 +24,7 @@ export interface CartItem {
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiTicketComponent, UiSkeletonComponent, UiAnimatedDialogComponent, ImageFallbackDirective],
+  imports: [CommonModule, FormsModule, ScrollingModule, UiTicketComponent, UiSkeletonComponent, UiAnimatedDialogComponent, ImageFallbackDirective],
   changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
   template: `
     <div class="relative flex flex-col md:flex-row h-[calc(100vh-2rem)] gap-3 md:gap-6 p-3 md:p-6 w-full">
@@ -104,12 +105,14 @@ export interface CartItem {
           </div>
         </div>
 
-        <!-- Grid de productos -->
-        <div class="flex-1 overflow-y-auto no-scrollbar pr-2">
+        <!-- Grid de productos con Virtual Scrolling -->
+        <div class="flex-1 overflow-hidden">
           @if (loading()) {
             <!-- Skeleton loading con más elementos para mejor UX -->
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-3">
-              <app-ui-skeleton variant="product" [repeat]="18" />
+            <div class="overflow-y-auto no-scrollbar h-full pr-2">
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-3">
+                <app-ui-skeleton variant="product" [repeat]="18" />
+              </div>
             </div>
           } @else if (filteredProducts().length === 0) {
             <!-- Estado vacío -->
@@ -124,8 +127,14 @@ export interface CartItem {
               </button>
             </div>
           } @else {
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-3">
-              @for (product of filteredProducts(); track product.id) {
+            <!-- 🚀 Virtual Scroll Viewport para 500+ productos -->
+            <cdk-virtual-scroll-viewport 
+              [itemSize]="220" 
+              class="h-full"
+              style="contain: strict;">
+              
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-3 pr-2">
+                @for (product of filteredProducts(); track product.id) {
                 <button 
                   [disabled]="product.stock === 0"
                   [class.opacity-50]="product.stock === 0"
@@ -202,7 +211,9 @@ export interface CartItem {
                   }
                 </button>
               }
-            </div>
+              </div>
+            </cdk-virtual-scroll-viewport>
+            <!-- 🚀 Fin Virtual Scroll -->
           }
         </div>
       </div>
@@ -255,6 +266,7 @@ export interface CartItem {
                 <img 
                   [src]="item.product.image" 
                   [alt]="item.product.name"
+                  loading="lazy"
                   class="h-full w-full object-cover"
                 />
               </div>
@@ -495,7 +507,7 @@ export interface CartItem {
               @for (item of cart(); track item.product.id + '-' + (item.variant?.id || 'no-variant')) {
                 <div class="flex gap-3 items-start bg-stone-50 rounded-xl p-3 border border-stone-100">
                   <div class="h-16 w-16 rounded-lg bg-white overflow-hidden shrink-0 border border-stone-200">
-                    <img [src]="item.product.image" [alt]="item.product.name" class="h-full w-full object-cover" />
+                    <img [src]="item.product.image" [alt]="item.product.name" loading="lazy" class="h-full w-full object-cover" />
                   </div>
                   
                   <div class="flex-1 min-w-0">
@@ -638,6 +650,7 @@ export interface CartItem {
               <img 
                 [src]="selectedProductForVariant()!.image" 
                 [alt]="selectedProductForVariant()!.name"
+                loading="lazy"
                 class="h-full w-full object-cover"
               />
             </div>
@@ -836,6 +849,7 @@ export class PosPageComponent {
   private toastService = inject(ToastService);
   private authService = inject(AuthService);
   private logger = inject(LoggerService);
+  private destroyRef = inject(DestroyRef);
 
   // ViewChild para enfoque automático
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
@@ -861,9 +875,12 @@ export class PosPageComponent {
   constructor() {
     // Enfocar input de búsqueda de forma más eficiente (sin effect)
     // Solo una vez cuando el componente esté listo
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       this.searchInput?.nativeElement?.focus();
     }, 200);
+    
+    // 🧹 Cleanup automático con DestroyRef
+    this.destroyRef.onDestroy(() => clearTimeout(timeoutId));
     
     // 🎯 Auto-detectar tipo de venta basado en el día
     this.autoDetectSaleType();
@@ -871,8 +888,8 @@ export class PosPageComponent {
   
   // Auto-detectar tipo de venta por día de la semana
   autoDetectSaleType(): void {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
+    // ✅ Optimización: calculamos una sola vez
+    const dayOfWeek = new Date().getDay();
     
     if (dayOfWeek === 4) {
       this.saleType.set('feria-acobamba');

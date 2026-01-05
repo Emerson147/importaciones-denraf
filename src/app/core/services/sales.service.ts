@@ -151,9 +151,17 @@ export class SalesService {
     }
   }
 
-  // Ventas de hoy
+  // 📏 Cache de fecha actual para evitar recalcular new Date() en cada computed
+  private currentDateCache = computed(() => {
+    // Este computed se actualiza cuando cambian las ventas (trigger implícito)
+    // Forzamos dependencia leyendo la señal para que se re-compute cuando cambia
+    this.salesSignal();
+    return new Date().toDateString();
+  });
+
+  // Ventas de hoy (optimizado con cache)
   todaySales = computed(() => {
-    const today = new Date().toDateString();
+    const today = this.currentDateCache();
     return this.salesSignal().filter((s) => new Date(s.date).toDateString() === today);
   });
 
@@ -162,11 +170,12 @@ export class SalesService {
     return this.todaySales().reduce((sum, s) => sum + s.total, 0);
   });
 
-  // Ventas de la semana
+  // Ventas de la semana (optimizado con cálculo de fecha cacheado)
   weeklySales = computed(() => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    return this.salesSignal().filter((s) => new Date(s.date) >= weekAgo);
+    const weekAgoTime = weekAgo.getTime();
+    return this.salesSignal().filter((s) => new Date(s.date).getTime() >= weekAgoTime);
   });
 
   // Ingresos de la semana

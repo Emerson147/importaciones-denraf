@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, DestroyRef } from '@angular/core';
 import { NotificationService } from './notification.service';
 
 export interface Toast {
@@ -16,7 +16,9 @@ export interface Toast {
 })
 export class ToastService {
   private notificationService = inject(NotificationService);
+  private destroyRef = inject(DestroyRef);
   private toasts = signal<Toast[]>([]);
+  private activeTimeouts = new Map<string, number>();
   
   // Exponemos los toasts como readonly
   readonly toasts$ = this.toasts.asReadonly();
@@ -53,9 +55,14 @@ export class ToastService {
       });
     }
 
-    // Auto-remover después de la duración
+    // Auto-remover después de la duración con cleanup automático
     if (duration > 0) {
-      setTimeout(() => this.remove(id), duration);
+      const timeoutId = setTimeout(() => {
+        this.remove(id);
+        this.activeTimeouts.delete(id);
+      }, duration) as unknown as number;
+      
+      this.activeTimeouts.set(id, timeoutId);
     }
 
     return id;
@@ -79,6 +86,21 @@ export class ToastService {
 
   remove(id: string) {
     this.toasts.update(current => current.filter(t => t.id !== id));
+    
+    // 🧹 Limpiar timeout si existe
+    const timeoutId = this.activeTimeouts.get(id);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      this.activeTimeouts.delete(id);
+    }
+  }
+  
+  constructor() {
+    // 🧹 Cleanup global de todos los timeouts cuando el servicio se destruya
+    this.destroyRef.onDestroy(() => {
+      this.activeTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+      this.activeTimeouts.clear();
+    });
   }
 
   private getDefaultTitle(type: Toast['type']): string {

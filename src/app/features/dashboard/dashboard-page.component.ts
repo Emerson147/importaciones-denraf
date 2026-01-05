@@ -1,6 +1,6 @@
 import { Component, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgApexchartsModule } from 'ng-apexcharts';
+import { NgApexchartsModule, ApexOptions } from 'ng-apexcharts';
 import { 
   UiInputComponent,
   UiButtonComponent,
@@ -18,7 +18,6 @@ import { ApexChartConfigService } from '../../core/services/apex-chart-config.se
 import { InventoryMovementService } from '../../core/services/inventory-movement.service';
 import { AlertService } from '../../core/services/alert.service';
 import { Period } from '../../shared/ui/period-selector/period-selector.component';
-import { ApexOptions } from 'ng-apexcharts';
 
 // MODELO DE PRODUCTO (Inventario)
 interface Product {
@@ -35,6 +34,7 @@ interface Product {
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
+  // 🚀 Code-splitting automático: Angular lazy-loadea esta ruta completa (dashboard + sus dependencias)
   imports: [
     CommonModule,
     NgApexchartsModule,

@@ -19,7 +19,8 @@ export const routes: Routes = [
       // Aquí cargaremos tus páginas luego. Por ahora, un placeholder.
       { 
         path: 'dashboard', // dashboard(home)
-        loadComponent: () => import('./features/dashboard/dashboard-page.component').then(m => m.DashboardPageComponent)
+        loadComponent: () => import('./features/dashboard/dashboard-page.component').then(m => m.DashboardPageComponent),
+        data: { preload: true, preloadDelay: 0 } // 🚀 Precarga inmediata (high priority)
       },
       {
         path: 'inventario',
@@ -46,7 +47,8 @@ export const routes: Routes = [
       },
       {
         path: 'pos', // punto de venta
-        loadComponent: () => import('./features/pos/pos-page/pos-page.component').then(m => m.PosPageComponent)
+        loadComponent: () => import('./features/pos/pos-page/pos-page.component').then(m => m.PosPageComponent),
+        data: { preload: true, preloadDelay: 2000 } // 🚀 Precarga en 2s (high priority)
       },
       {
         path: 'clients', // clientes
@@ -54,7 +56,8 @@ export const routes: Routes = [
       },
       {
         path: 'reports', // reportes
-        loadComponent: () => import('./features/reports/reports-page.component').then(m => m.ReportsPageComponent)
+        loadComponent: () => import('./features/reports/reports-page.component').then(m => m.ReportsPageComponent),
+        data: { preload: true, preloadDelay: 5000 } // 🚀 Precarga en 5s (medium priority)
       },
       {
         path: 'sales', // historial de ventas

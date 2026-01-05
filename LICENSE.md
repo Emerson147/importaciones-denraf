@@ -78,3 +78,4 @@ Para adquirir una licencia o consultas:
 Al usar este software, aceptas estos términos. El incumplimiento puede resultar en la revocación de la licencia y acciones legales.
 
 **Copyright © 2026 [Tu Nombre/Empresa]. Todos los derechos reservados.**
+1

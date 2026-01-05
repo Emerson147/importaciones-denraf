@@ -1,5 +1,8 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, effect, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 import { ProductService } from '../../../core/services/product.service';
 import { CloudinaryService } from '../../../core/services/cloudinary.service';
 import { ProductVariant } from '../../../core/models';
@@ -16,6 +19,7 @@ import { ImageFallbackDirective } from '../../../shared/directives/image-fallbac
   standalone: true,
   imports: [
     CommonModule,
+    ScrollingModule, // 🚀 Virtual Scrolling
     UiInputComponent,
     UiButtonComponent,
     UiAnimatedDialogComponent,
@@ -29,6 +33,24 @@ import { ImageFallbackDirective } from '../../../shared/directives/image-fallbac
 export class ProductosPageComponent {
   private productService = inject(ProductService);
   private cloudinary = inject(CloudinaryService);
+  private destroyRef = inject(DestroyRef);
+
+  // 🚀 Debounce para búsqueda (Fase 2)
+  private searchSubject = new Subject<string>();
+  private debouncedSearch = signal('');
+
+  constructor() {
+    // 🚀 Configurar debounce de 300ms para la búsqueda
+    const subscription = this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(value => {
+      this.debouncedSearch.set(value);
+    });
+    
+    // 🧹 Cleanup automático
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
 
   // 🖼️ Estado de upload de imagen
   isUploadingImage = signal(false);
@@ -40,6 +62,13 @@ export class ProductosPageComponent {
 
   // Señales para búsqueda y modal
   searchQuery = signal('');
+  
+  // Método para manejar cambios en input de búsqueda
+  onSearchChange(value: string): void {
+    this.searchQuery.set(value);
+    this.searchSubject.next(value); // 🚀 Trigger debounce
+  }
+  
   isDialogOpen = signal(false);
   editingProductId = signal<string | null>(null); // Producto que se está editando
   modalTitle = computed(() => this.editingProductId() ? 'Editar Producto' : 'Nuevo Producto');
@@ -95,9 +124,9 @@ export class ProductosPageComponent {
     return this.variants().reduce((sum, v) => sum + v.stock, 0);
   });
 
-  // Computed: Filtrar productos por búsqueda
+  // Computed: Filtrar productos por búsqueda (con debounce)
   filteredProducts = computed(() => {
-    const query = this.searchQuery().toLowerCase();
+    const query = this.debouncedSearch().toLowerCase();
     return this.products().filter(
       (p) => p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)
     );

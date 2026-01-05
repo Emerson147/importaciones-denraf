@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth';
@@ -14,6 +14,7 @@ import { User } from '../../../core/models';
 export class LoginPageComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   // 🔄 Ahora es reactivo - se actualiza cuando Supabase carga los usuarios
   users = computed(() => this.authService.availableUsers());
@@ -32,10 +33,11 @@ export class LoginPageComponent {
       this.pin.set('');
       this.error.set('');
       // Autoenfoque en el primer input de PIN
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         const firstInput = document.querySelector('.pin-input') as HTMLInputElement;
         firstInput?.focus();
       }, 100);
+      this.destroyRef.onDestroy(() => clearTimeout(timeoutId));
     }
   }
 
@@ -133,7 +135,7 @@ export class LoginPageComponent {
     this.error.set('');
 
     // Simular delay de validación
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (this.authService.login(user.id, pin)) {
         this.router.navigate(['/']);
       } else {
@@ -147,5 +149,6 @@ export class LoginPageComponent {
         inputs[0]?.focus();
       }
     }, 300);
+    this.destroyRef.onDestroy(() => clearTimeout(timeoutId));
   }
 }

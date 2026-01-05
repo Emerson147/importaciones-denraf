@@ -54,9 +54,16 @@ export class InventoryMovementService {
     this.movementsSignal().filter(m => m.type === 'devolucion')
   );
 
-  // Movimientos de hoy
+  // 📏 Cache de fecha actual para evitar recalcular new Date() en cada computed
+  private currentDateCache = computed(() => {
+    // Trigger implícito para actualizar cuando cambien movimientos
+    this.movementsSignal();
+    return new Date().toDateString();
+  });
+
+  // Movimientos de hoy (optimizado con cache)
   todayMovements = computed(() => {
-    const today = new Date().toDateString();
+    const today = this.currentDateCache();
     return this.movementsSignal().filter(m => 
       new Date(m.date).toDateString() === today
     );
@@ -76,23 +83,21 @@ export class InventoryMovementService {
       .reduce((sum, entrada) => sum + (entrada.totalCost || 0), 0);
   });
 
-  // 💸 Inversión de la semana
+  // 💸 Inversión de la semana (optimizado con timestamps)
   weeklyInvestment = computed(() => {
-    const today = new Date();
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekAgoTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
     
     return this.entradas()
-      .filter(m => new Date(m.date) >= weekAgo)
+      .filter(m => new Date(m.date).getTime() >= weekAgoTime)
       .reduce((sum, entrada) => sum + (entrada.totalCost || 0), 0);
   });
 
-  // 💸 Inversión del mes
+  // 💸 Inversión del mes (optimizado con timestamps)
   monthlyInvestment = computed(() => {
-    const today = new Date();
-    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const monthAgoTime = Date.now() - (30 * 24 * 60 * 60 * 1000);
     
     return this.entradas()
-      .filter(m => new Date(m.date) >= monthAgo)
+      .filter(m => new Date(m.date).getTime() >= monthAgoTime)
       .reduce((sum, entrada) => sum + (entrada.totalCost || 0), 0);
   });
 

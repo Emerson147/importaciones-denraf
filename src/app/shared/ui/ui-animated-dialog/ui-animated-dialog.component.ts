@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -53,6 +53,9 @@ import { CommonModule } from '@angular/common';
   ],
 })
 export class UiAnimatedDialogComponent {
+  private destroyRef = inject(DestroyRef);
+  private activeTimeouts: number[] = [];
+  
   @Input() trigger: HTMLElement | null = null;
   @Input() maxWidth: 'sm' | 'md' | 'lg' = 'lg';
   transformOrigin = signal('center center');
@@ -76,13 +79,15 @@ export class UiAnimatedDialogComponent {
       // 1. Lo creamos en el DOM (showModal = true)
       this.showModal.set(true);
       // 2. Un tick después, iniciamos la animación de entrada (animateIn = true)
-      setTimeout(() => this.animateIn.set(true), 10);
+      const openTimeoutId = setTimeout(() => this.animateIn.set(true), 10) as unknown as number;
+      this.activeTimeouts.push(openTimeoutId);
     } else {
       // AL CERRAR:
       // 1. Iniciamos animación de salida (animateIn = false)
       this.animateIn.set(false);
       // 2. Esperamos a que termine la animación (400ms) y lo sacamos del DOM
-      setTimeout(() => this.showModal.set(false), 400);
+      const closeTimeoutId = setTimeout(() => this.showModal.set(false), 400) as unknown as number;
+      this.activeTimeouts.push(closeTimeoutId);
     }
   }
   @Output() isOpenChange = new EventEmitter<boolean>();
@@ -93,5 +98,13 @@ export class UiAnimatedDialogComponent {
 
   close() {
     this.isOpenChange.emit(false);
+  }
+  
+  constructor() {
+    // 🧹 Cleanup automático de todos los timeouts de animación
+    this.destroyRef.onDestroy(() => {
+      this.activeTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+      this.activeTimeouts = [];
+    });
   }
 }
