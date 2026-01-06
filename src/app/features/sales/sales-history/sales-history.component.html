@@ -223,9 +223,9 @@
                   <span class="text-xs text-stone-600 dark:text-stone-400"
                     >{{ item.quantity }}x {{ item.productName }}</span
                   >
-                  } @if ((sale.items?.length || 0) > 2) {
+                  } @if ((sale.items.length || 0) > 2) {
                   <span class="text-xs text-stone-400 dark:text-stone-500"
-                    >+{{ (sale.items?.length || 0) - 2 }} más</span
+                    >+{{ (sale.items.length || 0) - 2 }} más</span
                   >
                   }
                 </div>

@@ -25,7 +25,7 @@ interface Client {
 @Component({
   selector: 'app-clients-page',
   standalone: true,
-  imports: [CommonModule, UiInputComponent, UiButtonComponent, UiBadgeComponent, UiAnimatedDialogComponent, UiLabelComponent],
+  imports: [CommonModule, UiInputComponent, UiButtonComponent, UiAnimatedDialogComponent, UiLabelComponent],
   templateUrl: './clients-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
 })

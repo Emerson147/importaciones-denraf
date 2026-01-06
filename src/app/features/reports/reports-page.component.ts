@@ -12,7 +12,7 @@ import { ApexChartConfigService } from '../../core/services/apex-chart-config.se
   selector: 'app-reports-page',
   standalone: true,
   // 🚀 NgApexchartsModule está aquí pero Angular hará code-splitting automático al ser standalone + lazy route
-  imports: [CommonModule, NgApexchartsModule, UiButtonComponent, UiExportMenuComponent],
+  imports: [CommonModule, NgApexchartsModule, UiExportMenuComponent],
   templateUrl: './reports-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
 })

@@ -24,7 +24,7 @@ export interface CartItem {
 @Component({
   selector: 'app-pos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ScrollingModule, UiTicketComponent, UiSkeletonComponent, UiAnimatedDialogComponent, ImageFallbackDirective],
+  imports: [CommonModule, FormsModule, ScrollingModule, UiTicketComponent, UiSkeletonComponent, UiAnimatedDialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
   template: `
     <div class="relative flex flex-col md:flex-row h-[calc(100vh-2rem)] gap-3 md:gap-6 p-3 md:p-6 w-full">
@@ -36,7 +36,7 @@ export interface CartItem {
         <div class="space-y-3">
           <!-- Header limpio y minimalista -->
           <div class="flex items-center justify-between gap-3">
-            <div class="flex-shrink-0">
+            <div class="shrink-0">
               <h1 class="text-lg md:text-xl font-serif font-bold text-stone-800">POS</h1>
               <div class="hidden md:flex items-center gap-2 mt-1">
                 <p class="text-xs text-stone-500">Busca y agrega productos al carrito</p>
@@ -143,7 +143,7 @@ export interface CartItem {
                   (click)="addToCart(product)"
                   [attr.aria-label]="'Agregar ' + product.name + ' al carrito'"
                 >
-                  <div class="aspect-[3/4] w-full overflow-hidden bg-stone-100 relative">
+                  <div class="aspect-3/4 w-full overflow-hidden bg-stone-100 relative">
                     @if (product.image) {
                       <img 
                         [src]="product.image" 
@@ -219,7 +219,7 @@ export interface CartItem {
       </div>
 
       <!-- Panel derecho: Carrito (Desktop) -->
-      <div class="hidden md:flex w-[28rem] flex-shrink-0 flex-col bg-white rounded-3xl border border-stone-100 shadow-xl shadow-stone-200/50 overflow-hidden">
+      <div class="hidden md:flex w-md shrink-0 flex-col bg-white rounded-3xl border border-stone-100 shadow-xl shadow-stone-200/50 overflow-hidden">
         
         <!-- Header del carrito -->
         <div class="p-5 border-b border-stone-50 bg-stone-50/50">
@@ -646,7 +646,7 @@ export interface CartItem {
         <div class="space-y-6">
           <!-- Imagen del producto -->
           <div class="flex flex-col items-center gap-3 pb-5 border-b border-stone-100">
-            <div class="h-28 w-28 rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100 overflow-hidden shadow-sm">
+            <div class="h-28 w-28 rounded-2xl bg-linear-to-br from-stone-50 to-stone-100 overflow-hidden shadow-sm">
               <img 
                 [src]="selectedProductForVariant()!.image" 
                 [alt]="selectedProductForVariant()!.name"

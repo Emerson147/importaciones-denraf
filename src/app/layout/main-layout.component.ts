@@ -24,8 +24,7 @@ import { ClickOutsideDirective } from '../shared/directives/click-outside/click-
     ConnectionStatusComponent,
     PwaInstallPromptComponent,
     UiErrorLoggerComponent,
-    SyncIndicatorComponent,
-    ClickOutsideDirective
+    SyncIndicatorComponent
   ],
   templateUrl: './main-layout.component.html',
 })

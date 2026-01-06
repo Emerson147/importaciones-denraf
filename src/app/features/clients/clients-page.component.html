@@ -27,7 +27,7 @@
 
       <div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-5 transition-colors duration-100">
         <div class="flex items-center gap-3 mb-3">
-          <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white">
+          <div class="h-10 w-10 rounded-xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white">
             <span class="material-icons-outlined text-lg">star</span>
           </div>
           <p class="text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500 font-medium">Clientes Gold</p>
@@ -52,7 +52,7 @@
           </div>
           <p class="text-xs uppercase tracking-wide text-stone-400 dark:text-stone-500 font-medium">Valor Total</p>
         </div>
-        <p class="text-2xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">S/ {{ totalClientValue() | number:'1.0-0' }}</p>
+        <p class="text-2xl font-bold bg-linear-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">S/ {{ totalClientValue() | number:'1.0-0' }}</p>
       </div>
 
     </div>

@@ -58,7 +58,7 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
             <p class="text-stone-500 dark:text-stone-400 text-xs uppercase tracking-wide font-medium mb-1">
               Puntos
             </p>
-            <p class="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+            <p class="text-3xl font-bold bg-linear-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
               {{ gamification.stats().totalPoints }}
             </p>
             <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
@@ -129,7 +129,7 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
                     </p>
                   </div>
                   
-                  <span class="px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
+                  <span class="px-3 py-1 rounded-full text-xs font-medium shrink-0 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
                     {{ goalTypeLabel(goal.type) }}
                   </span>
                 </div>
@@ -175,7 +175,7 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
                      [class.opacity-60]="!achievement.unlocked">
                   
                   <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
+                    <div class="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
                       <span class="material-icons-outlined text-2xl">{{ achievement.icon }}</span>
                     </div>
                     
@@ -227,7 +227,7 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
                   
                   <div class="flex items-center gap-3">
                     <!-- Rank Badge -->
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
+                    <div class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
                          [class.bg-gradient-to-br]="entry.rank <= 3"
                          [class.from-yellow-400]="entry.rank === 1"
                          [class.to-yellow-600]="entry.rank === 1"
@@ -264,8 +264,8 @@ import { UiPageHeaderComponent } from '../../shared/ui/ui-page-header/ui-page-he
                     </div>
                     
                     <!-- Points -->
-                    <div class="text-right flex-shrink-0">
-                      <div class="font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+                    <div class="text-right shrink-0">
+                      <div class="font-bold text-sm bg-linear-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
                         {{ entry.points }}
                       </div>
                       <div class="text-xs text-stone-500 dark:text-stone-500">

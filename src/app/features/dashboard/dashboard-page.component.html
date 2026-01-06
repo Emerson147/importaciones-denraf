@@ -85,7 +85,7 @@
             >
               Ingresos
             </p>
-            <p class="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent transition-all duration-300 ease-out group-hover:scale-105 transform-gpu">
+            <p class="text-3xl font-bold bg-linear-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent transition-all duration-300 ease-out group-hover:scale-105 transform-gpu">
               S/ {{ weeklyRevenue() | number : '1.0-0' }}
             </p>
             <p class="text-xs text-stone-400 dark:text-stone-500 mt-2">
@@ -127,7 +127,7 @@
           >
             <div class="flex items-start justify-between mb-4">
               <div
-                class="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white transition-all duration-200 ease-out group-hover:rotate-6 group-hover:scale-110"
+                class="h-10 w-10 rounded-xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white transition-all duration-200 ease-out group-hover:rotate-6 group-hover:scale-110"
               >
                 <span class="material-icons-outlined text-lg">calendar_today</span>
               </div>
@@ -268,7 +268,7 @@
           </div>
 
           <!-- ApexCharts Area Chart -->
-          <div class="h-[240px]">
+          <div class="h-60">
             <apx-chart
               [series]="weeklyChartOptions().series!"
               [chart]="weeklyChartOptions().chart!"
@@ -368,7 +368,7 @@
                         <p class="font-semibold text-stone-800">
                           {{ sale.items?.[0]?.productName || sale.items?.[0]?.productId || 'Varios productos' }}
                         </p>
-                        <p class="text-xs text-stone-400">{{ sale.items?.length || 0 }} item(s)</p>
+                        <p class="text-xs text-stone-400">{{ sale.items.length || 0 }} item(s)</p>
                       </div>
                     </div>
                   </td>
@@ -448,7 +448,7 @@
               </div>
               <div class="flex items-center justify-between">
                 <p class="text-xs text-stone-400 dark:text-stone-500">
-                  {{ sale.items?.length || 0 }} item(s)
+                  {{ sale.items.length || 0 }} item(s)
                 </p>
                 <p class="text-base font-bold text-stone-900 dark:text-stone-100">
                   S/ {{ sale.total | number : '1.2-2' }}
@@ -488,7 +488,7 @@
             }
           </div>
 
-          <app-ui-button class="w-full mt-4 bg-stone-900 dark:bg-stone-100 hover:bg-black dark:hover:bg-white text-white dark:text-stone-900 rounded-xl min-h-[44px] touch-manipulation transition-colors duration-100">
+          <app-ui-button class="w-full mt-4 bg-stone-900 dark:bg-stone-100 hover:bg-black dark:hover:bg-white text-white dark:text-stone-900 rounded-xl min-h-11 touch-manipulation transition-colors duration-100">
             Gestionar Inventario
           </app-ui-button>
         </div>
@@ -545,7 +545,7 @@
 
         <!-- Proyección de Ventas -->
         <div
-          class="bg-gradient-to-br from-stone-900 to-stone-800 rounded-2xl shadow-lg p-6 text-white"
+          class="bg-linear-to-br from-stone-900 to-stone-800 rounded-2xl shadow-lg p-6 text-white"
         >
           <div class="mb-6">
             <div class="flex items-center gap-2 mb-2">
@@ -565,7 +565,7 @@
               <div class="flex items-center gap-2 mt-3">
                 <div class="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
                   <div
-                    class="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full"
+                    class="h-full bg-linear-to-r from-emerald-400 to-emerald-500 rounded-full"
                     style="width: 75%"
                   ></div>
                 </div>
