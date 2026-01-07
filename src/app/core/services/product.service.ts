@@ -539,28 +539,36 @@ export class ProductService {
   }
 
   /**
-   * Eliminar un producto
+   * Eliminar un producto (Soft Delete - cambia estado a 'archived')
+   * No elimina físicamente si tiene ventas asociadas
    */
-  deleteProduct(id: string): boolean {
+  async deleteProduct(id: string): Promise<boolean> {
     return (
       this.errorHandler.handleSyncOperation(
-        () => {
+        async () => {
           const products = this.productsSignal();
-          const filtered = products.filter((p) => p.id !== id);
+          const product = products.find((p) => p.id === id);
 
-          if (filtered.length === products.length) {
+          if (!product) {
             throw new Error(`Producto ${id} no encontrado`);
           }
 
+          // 🔄 Soft Delete: Cambiar estado a 'archived' en lugar de eliminar
+          const updatedProduct = { ...product, status: 'archived' as const };
+          
+          // Actualizar signal inmediatamente (removemos del listado)
+          const filtered = products.filter((p) => p.id !== id);
           this.productsSignal.set(filtered);
 
-          // 🔄 Sincronizar eliminación con Supabase
-          this.syncService.queueForSync('product', 'delete', { id });
-          this.localDb.deleteProduct(id);
+          // 🔄 Sincronizar actualización con Supabase (update, no delete)
+          await this.syncService.queueForSync('product', 'update', updatedProduct);
+          await this.localDb.deleteProduct(id); // Eliminar del cache local
+          
+          console.log(`✅ Producto ${id} archivado correctamente`);
           return true;
         },
-        'Eliminación de producto',
-        'No se pudo eliminar el producto'
+        'Archivado de producto',
+        'No se pudo archivar el producto'
       ) || false
     );
   }

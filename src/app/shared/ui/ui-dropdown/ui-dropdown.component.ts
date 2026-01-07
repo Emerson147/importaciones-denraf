@@ -18,22 +18,22 @@ import { ClickOutsideDirective } from '../../directives/click-outside/click-outs
 
       @if (isOpen) {
         <div 
-          class="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-xl border border-stone-100 bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none animate-in fade-in zoom-in-95 duration-200"
+          class="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-48 max-w-xs origin-top-right rounded-xl border border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none animate-in fade-in zoom-in-95 duration-200 z-50"
         >
           <div class="py-1">
             <button 
               (click)="onAction('edit')"
-              class="group flex w-full items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-50"
+              class="group flex w-full items-center px-4 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700"
             >
-              <span class="material-icons-outlined mr-3 text-stone-400 group-hover:text-stone-600">edit</span>
+              <span class="material-icons-outlined mr-3 text-stone-400 dark:text-stone-500 group-hover:text-stone-600 dark:group-hover:text-stone-300">edit</span>
               Editar
             </button>
 
             <button 
               (click)="onAction('delete')"
-              class="group flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              class="group flex w-full items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
-              <span class="material-icons-outlined mr-3 text-red-400 group-hover:text-red-600">delete</span>
+              <span class="material-icons-outlined mr-3 text-red-400 dark:text-red-500 group-hover:text-red-600 dark:group-hover:text-red-400">delete</span>
               Eliminar
             </button>
           </div>

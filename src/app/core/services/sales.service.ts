@@ -29,7 +29,7 @@ export class SalesService {
   isLoading = signal(true);
   isSyncing = signal(false);
   lastSyncTime = signal<Date | null>(null);
-  
+
   // 🎯 Control de inicialización única
   private initialized = false;
   private readonly SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
@@ -72,7 +72,7 @@ export class SalesService {
   private async loadFromCache(): Promise<boolean> {
     try {
       const cachedSales = await this.localDb.getSales();
-      
+
       if (cachedSales && cachedSales.length > 0) {
         console.log(`⚡ [Sales] Cache: ${cachedSales.length} ventas cargadas INSTANTÁNEAMENTE`);
         this.salesSignal.set(cachedSales);
@@ -94,7 +94,7 @@ export class SalesService {
   private shouldSyncWithSupabase(): boolean {
     const lastSync = this.lastSyncTime();
     if (!lastSync) return true;
-    
+
     const timeSinceLastSync = Date.now() - lastSync.getTime();
     return timeSinceLastSync > this.SYNC_INTERVAL_MS;
   }
@@ -245,7 +245,11 @@ export class SalesService {
         // ⚡ SINCRONIZACIÓN AUTOMÁTICA: Reducir stock de cada producto vendido
         const failedItems: string[] = [];
         newSale.items.forEach((item) => {
-          const success = this.productService.reduceStock(item.productId, item.quantity, item.variantId);
+          const success = this.productService.reduceStock(
+            item.productId,
+            item.quantity,
+            item.variantId
+          );
           if (!success) {
             failedItems.push(item.productName);
           }
@@ -311,12 +315,50 @@ export class SalesService {
     return this.salesSignal().find((s) => s.id === id);
   }
 
-  // Cancelar venta
-  cancelSale(id: string): void {
+  // ❌ Cancelar/Anular venta CON RESTAURACIÓN DE STOCK
+  cancelSale(id: string, reason?: string, restoreStock: boolean = true): boolean {
+    const sale = this.getSaleById(id);
+
+    if (!sale) {
+      this.toastService.error('Venta no encontrada');
+      return false;
+    }
+
+    if (sale.status === 'cancelled') {
+      this.toastService.warning('Esta venta ya fue anulada');
+      return false;
+    }
+
+    // 🔄 RESTAURAR STOCK de cada producto
+    if (restoreStock) {
+      sale.items.forEach((item) => {
+        const success = this.productService.addStock(item.productId, item.quantity, item.variantId);
+        if (success) {
+          console.log(`✅ Stock restaurado: ${item.productName} (+${item.quantity})`);
+        } else {
+          console.warn(`⚠️ No se pudo restaurar stock de: ${item.productName}`);
+        }
+      });
+    }
+
+    // Actualizar estado de la venta
+    const cancellationDate = new Date();
     this.salesSignal.update((current) =>
-      current.map((s) => (s.id === id ? { ...s, status: 'cancelled' as const } : s))
+      current.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              status: 'cancelled' as const,
+              notes: s.notes
+                ? `${s.notes} | ANULADA: ${
+                    reason || 'Sin motivo'
+                  } (${cancellationDate.toLocaleString()})`
+                : `ANULADA: ${reason || 'Sin motivo'} (${cancellationDate.toLocaleString()})`,
+            }
+          : s
+      )
     );
-    
+
     // Sincronizar cambio con Supabase
     const cancelledSale = this.getSaleById(id);
     if (cancelledSale) {
@@ -324,6 +366,11 @@ export class SalesService {
       this.localDb.saveSale(cancelledSale);
       this.syncToSupabase();
     }
+
+    this.toastService.success(
+      `Venta ${sale.saleNumber} anulada${restoreStock ? ' y stock restaurado' : ''}`
+    );
+    return true;
   }
 
   // Filtrar ventas por rango de fechas

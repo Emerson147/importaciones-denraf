@@ -1,4 +1,12 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy, effect, DestroyRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+  effect,
+  DestroyRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
@@ -6,11 +14,11 @@ import { Subject } from 'rxjs';
 import { ProductService } from '../../../core/services/product.service';
 import { CloudinaryService } from '../../../core/services/cloudinary.service';
 import { ProductVariant } from '../../../core/models';
-import { 
+import {
   UiInputComponent,
   UiButtonComponent,
   UiAnimatedDialogComponent,
-  UiLabelComponent
+  UiLabelComponent,
 } from '../../../shared/ui';
 import { ImageFallbackDirective } from '../../../shared/directives/image-fallback.directive';
 
@@ -24,11 +32,11 @@ import { ImageFallbackDirective } from '../../../shared/directives/image-fallbac
     UiButtonComponent,
     UiAnimatedDialogComponent,
     UiLabelComponent,
-    ImageFallbackDirective
+    ImageFallbackDirective,
   ],
   templateUrl: './productos-page.component.html',
   styleUrls: ['./productos-page.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush // 🚀 Optimización de Change Detection
+  changeDetection: ChangeDetectionStrategy.OnPush, // 🚀 Optimización de Change Detection
 })
 export class ProductosPageComponent {
   private productService = inject(ProductService);
@@ -41,13 +49,12 @@ export class ProductosPageComponent {
 
   constructor() {
     // 🚀 Configurar debounce de 300ms para la búsqueda
-    const subscription = this.searchSubject.pipe(
-      debounceTime(300),
-      distinctUntilChanged()
-    ).subscribe(value => {
-      this.debouncedSearch.set(value);
-    });
-    
+    const subscription = this.searchSubject
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe((value) => {
+        this.debouncedSearch.set(value);
+      });
+
     // 🧹 Cleanup automático
     this.destroyRef.onDestroy(() => subscription.unsubscribe());
   }
@@ -62,16 +69,32 @@ export class ProductosPageComponent {
 
   // Señales para búsqueda y modal
   searchQuery = signal('');
-  
+
+  // 🆕 Sistema de filtros inicial
+  showInitialFilters = signal(true); // Mostrar vista de filtros inicial
+  selectedCategory = signal<string | null>(null);
+  selectedGender = signal<string | null>(null);
+
+  // Categorías disponibles
+  categories = computed(() => {
+    const cats = new Set(this.products().map((p) => p.category));
+    return Array.from(cats).sort();
+  });
+
   // Método para manejar cambios en input de búsqueda
   onSearchChange(value: string): void {
     this.searchQuery.set(value);
     this.searchSubject.next(value); // 🚀 Trigger debounce
+
+    // Si hay búsqueda, ocultar vista de filtros inicial
+    if (value.trim().length > 0) {
+      this.showInitialFilters.set(false);
+    }
   }
-  
+
   isDialogOpen = signal(false);
   editingProductId = signal<string | null>(null); // Producto que se está editando
-  modalTitle = computed(() => this.editingProductId() ? 'Editar Producto' : 'Nuevo Producto');
+  modalTitle = computed(() => (this.editingProductId() ? 'Editar Producto' : 'Nuevo Producto'));
 
   // Señales para el formulario de creación/edición
   productName = signal('');
@@ -90,7 +113,7 @@ export class ProductosPageComponent {
 
   // Computed: Tallas únicas que tienen variantes
   activeSizes = computed(() => {
-    const sizes = new Set(this.variants().map(v => v.size));
+    const sizes = new Set(this.variants().map((v) => v.size));
     return Array.from(sizes);
   });
 
@@ -98,8 +121,8 @@ export class ProductosPageComponent {
   activeColors = computed(() => {
     const activeSize = this.activeSizeTab();
     return this.variants()
-      .filter(v => v.size === activeSize)
-      .map(v => v.color);
+      .filter((v) => v.size === activeSize)
+      .map((v) => v.color);
   });
 
   // Computed: Ganancia y margen en tiempo real
@@ -111,12 +134,14 @@ export class ProductosPageComponent {
 
   // Computed: Validación del formulario
   isFormValid = computed(() => {
-    return this.productName().trim().length > 0 &&
-           this.costPrice() > 0 &&
-           this.salePrice() > 0 &&
-           this.salePrice() > this.costPrice() &&
-           this.variants().length > 0 &&
-           this.variants().every(v => v.stock >= 0);
+    return (
+      this.productName().trim().length > 0 &&
+      this.costPrice() > 0 &&
+      this.salePrice() > 0 &&
+      this.salePrice() > this.costPrice() &&
+      this.variants().length > 0 &&
+      this.variants().every((v) => v.stock >= 0)
+    );
   });
 
   // Computed: Stock total de todas las variantes
@@ -124,15 +149,74 @@ export class ProductosPageComponent {
     return this.variants().reduce((sum, v) => sum + v.stock, 0);
   });
 
-  // Computed: Filtrar productos por búsqueda (con debounce)
+  // Computed: Filtrar productos por búsqueda (con debounce) y filtros
   filteredProducts = computed(() => {
+    let filtered = this.products();
+
+    // Filtrar por categoría si está seleccionada
+    const category = this.selectedCategory();
+    if (category) {
+      filtered = filtered.filter((p) => p.category === category);
+    }
+
+    // Filtrar por género si está seleccionado (asumiendo que tienes un campo 'gender' en el producto)
+    const gender = this.selectedGender();
+    if (gender) {
+      // Si no tienes un campo 'gender', puedes usar categorías o nombre
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(gender.toLowerCase()) ||
+          p.category.toLowerCase().includes(gender.toLowerCase())
+      );
+    }
+
+    // Filtrar por búsqueda
     const query = this.debouncedSearch().toLowerCase();
-    return this.products().filter(
-      (p) => p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)
-    );
+    if (query) {
+      filtered = filtered.filter(
+        (p) => p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
   });
 
   // MÉTODOS
+
+  /**
+   * Aplicar filtro de categoría
+   */
+  applyCategory(category: string) {
+    this.selectedCategory.set(category);
+    this.showInitialFilters.set(false);
+  }
+
+  /**
+   * Ver todos los productos (sin filtros)
+   */
+  viewAllProducts() {
+    this.selectedCategory.set(null);
+    this.selectedGender.set(null);
+    this.showInitialFilters.set(false);
+  }
+
+  /**
+   * Limpiar filtros activos
+   */
+  clearFilters() {
+    this.selectedCategory.set(null);
+    this.selectedGender.set(null);
+    this.searchQuery.set('');
+    this.debouncedSearch.set('');
+  }
+
+  /**
+   * Volver a la vista de filtros inicial
+   */
+  backToFilters() {
+    this.clearFilters();
+    this.showInitialFilters.set(true);
+  }
 
   /**
    * Abrir modal para crear un nuevo producto
@@ -147,7 +231,7 @@ export class ProductosPageComponent {
    * Abrir modal para editar un producto existente
    */
   openEdit(productId: string) {
-    const product = this.products().find(p => p.id === productId);
+    const product = this.products().find((p) => p.id === productId);
     if (!product) return;
 
     this.editingProductId.set(productId);
@@ -156,7 +240,7 @@ export class ProductosPageComponent {
     this.costPrice.set(product.cost);
     this.salePrice.set(product.price);
     this.selectedImage.set(product.image || null);
-    
+
     // Cargar variantes existentes
     if (product.variants && product.variants.length > 0) {
       this.variants.set([...product.variants]);
@@ -165,16 +249,18 @@ export class ProductosPageComponent {
       this.activeSizeTab.set(firstSize);
     } else {
       // Si no hay variantes, crear una por defecto
-      this.variants.set([{
-        id: crypto.randomUUID(), // ✅ UUID válido
-        size: 'S',
-        color: 'Negro',
-        stock: product.stock || 0,
-        barcode: ''
-      }]);
+      this.variants.set([
+        {
+          id: crypto.randomUUID(), // ✅ UUID válido
+          size: 'S',
+          color: 'Negro',
+          stock: product.stock || 0,
+          barcode: '',
+        },
+      ]);
       this.activeSizeTab.set('S');
     }
-    
+
     this.isDialogOpen.set(true);
   }
 
@@ -189,13 +275,15 @@ export class ProductosPageComponent {
     this.activeSizeTab.set('S');
     this.selectedImage.set(null);
     // Inicializar con una variante por defecto
-    this.variants.set([{
-      id: crypto.randomUUID(), // ✅ UUID válido
-      size: 'S',
-      color: 'Negro',
-      stock: 0,
-      barcode: ''
-    }]);
+    this.variants.set([
+      {
+        id: crypto.randomUUID(), // ✅ UUID válido
+        size: 'S',
+        color: 'Negro',
+        stock: 0,
+        barcode: '',
+      },
+    ]);
   }
 
   /**
@@ -207,8 +295,8 @@ export class ProductosPageComponent {
   addSize(size: string) {
     const currentVariants = this.variants();
     // Verificar si ya existe alguna variante con esta talla
-    const hasSizeAlready = currentVariants.some(v => v.size === size);
-    
+    const hasSizeAlready = currentVariants.some((v) => v.size === size);
+
     if (!hasSizeAlready) {
       // Agregar una variante con el primer color por defecto
       const newVariant: ProductVariant = {
@@ -216,11 +304,11 @@ export class ProductosPageComponent {
         size,
         color: 'Negro',
         stock: 0,
-        barcode: ''
+        barcode: '',
       };
       this.variants.set([...currentVariants, newVariant]);
     }
-    
+
     // Cambiar a la talla que acabamos de agregar
     this.activeSizeTab.set(size);
   }
@@ -230,17 +318,19 @@ export class ProductosPageComponent {
    */
   removeSize(size: string) {
     const currentVariants = this.variants();
-    const filtered = currentVariants.filter(v => v.size !== size);
-    
+    const filtered = currentVariants.filter((v) => v.size !== size);
+
     if (filtered.length === 0) {
       // Si se eliminan todas, mantener al menos una variante
-      this.variants.set([{
-        id: crypto.randomUUID(), // ✅ UUID válido
-        size: 'S',
-        color: 'Negro',
-        stock: 0,
-        barcode: ''
-      }]);
+      this.variants.set([
+        {
+          id: crypto.randomUUID(), // ✅ UUID válido
+          size: 'S',
+          color: 'Negro',
+          stock: 0,
+          barcode: '',
+        },
+      ]);
       this.activeSizeTab.set('S');
     } else {
       this.variants.set(filtered);
@@ -257,19 +347,17 @@ export class ProductosPageComponent {
   addColorToActiveSize(color: string) {
     const activeSize = this.activeSizeTab();
     const currentVariants = this.variants();
-    
+
     // Verificar si ya existe esta combinación
-    const exists = currentVariants.some(
-      v => v.size === activeSize && v.color === color
-    );
-    
+    const exists = currentVariants.some((v) => v.size === activeSize && v.color === color);
+
     if (!exists) {
       const newVariant: ProductVariant = {
         id: crypto.randomUUID(), // ✅ UUID válido
         size: activeSize,
         color,
         stock: 0,
-        barcode: ''
+        barcode: '',
       };
       this.variants.set([...currentVariants, newVariant]);
     }
@@ -281,19 +369,17 @@ export class ProductosPageComponent {
   removeColorFromActiveSize(color: string) {
     const activeSize = this.activeSizeTab();
     const currentVariants = this.variants();
-    
+
     // Filtrar la variante específica
-    const filtered = currentVariants.filter(
-      v => !(v.size === activeSize && v.color === color)
-    );
-    
+    const filtered = currentVariants.filter((v) => !(v.size === activeSize && v.color === color));
+
     // Asegurar que cada talla tenga al menos un color
-    const sizeVariants = filtered.filter(v => v.size === activeSize);
+    const sizeVariants = filtered.filter((v) => v.size === activeSize);
     if (sizeVariants.length === 0) {
       // Mantener al menos una variante para esta talla
       return;
     }
-    
+
     this.variants.set(filtered);
   }
 
@@ -303,7 +389,7 @@ export class ProductosPageComponent {
   toggleColorForActiveSize(color: string) {
     const activeSize = this.activeSizeTab();
     const hasColor = this.activeColors().includes(color);
-    
+
     if (hasColor) {
       this.removeColorFromActiveSize(color);
     } else {
@@ -315,7 +401,7 @@ export class ProductosPageComponent {
    * Actualizar stock de una variante específica
    */
   updateVariantStock(variantId: string, stock: number) {
-    const updated = this.variants().map(v => 
+    const updated = this.variants().map((v) =>
       v.id === variantId ? { ...v, stock: Math.max(0, stock) } : v
     );
     this.variants.set(updated);
@@ -325,9 +411,7 @@ export class ProductosPageComponent {
    * Toggle expandir/contraer variantes de un producto
    */
   toggleProductVariants(productId: string) {
-    this.expandedProductId.set(
-      this.expandedProductId() === productId ? null : productId
-    );
+    this.expandedProductId.set(this.expandedProductId() === productId ? null : productId);
   }
 
   onFileSelected(event: Event) {
@@ -354,27 +438,25 @@ export class ProductosPageComponent {
     const editingId = this.editingProductId();
     const totalStock = this.totalStock();
     const allVariants = this.variants();
-    
+
     // Extraer tallas y colores únicos de las variantes
-    const uniqueSizes = Array.from(new Set(allVariants.map(v => v.size)));
-    const uniqueColors = Array.from(new Set(allVariants.map(v => v.color)));
+    const uniqueSizes = Array.from(new Set(allVariants.map((v) => v.size)));
+    const uniqueColors = Array.from(new Set(allVariants.map((v) => v.color)));
 
     // 🖼️ Subir imagen a Cloudinary si hay un archivo nuevo
     let imageUrl = this.selectedImage();
     const file = this.selectedFile();
-    
+
     if (file && this.cloudinary.isConfigured()) {
       try {
         this.isUploadingImage.set(true);
         console.log('📤 Subiendo imagen a Cloudinary...');
-        
+
         const publicId = editingId || `producto-${Date.now()}`;
-        const result = await this.cloudinary.uploadImage(
-          file,
-          publicId,
-          (progress) => this.uploadProgress.set(progress.percentage)
+        const result = await this.cloudinary.uploadImage(file, publicId, (progress) =>
+          this.uploadProgress.set(progress.percentage)
         );
-        
+
         imageUrl = result.url;
         console.log('✅ Imagen subida:', imageUrl);
       } catch (error) {
@@ -429,10 +511,17 @@ export class ProductosPageComponent {
     }
   }
 
-  handleAction(action: string, id: string) {
+  async handleAction(action: string, id: string) {
     if (action === 'delete') {
-      if (confirm('¿Borrar producto del inventario?')) {
-        this.productService.deleteProduct(id);
+      if (
+        confirm(
+          '¿Archivar este producto? No se eliminará si tiene ventas asociadas, solo se ocultará del inventario.'
+        )
+      ) {
+        const success = await this.productService.deleteProduct(id);
+        if (!success) {
+          alert('Error al archivar el producto. Por favor, intente nuevamente.');
+        }
       }
     }
   }
@@ -458,13 +547,38 @@ export class ProductosPageComponent {
    * Obtener variantes de una talla específica
    */
   getVariantsBySize(size: string): ProductVariant[] {
-    return this.variants().filter(v => v.size === size);
+    return this.variants().filter((v) => v.size === size);
   }
 
   /**
    * Contar variantes de una talla específica
    */
   countVariantsBySize(size: string): number {
-    return this.variants().filter(v => v.size === size).length;
+    return this.variants().filter((v) => v.size === size).length;
   }
+
+  /**
+   * Contar productos por categoría
+   */
+  countProductsByCategory(category: string): number {
+    return this.products().filter((p) => p.category === category).length;
+  }
+
+  /**
+   * Obtener icono Material para una categoría
+   */
+  getCategoryIcon(category: string): string {
+    const icons: Record<string, string> = {
+      General: 'inventory_2',
+      Casacas: 'checkroom',
+      Pantalones: 'straighten',
+      Polos: 'dry_cleaning',
+      Jeans: 'style',
+      Accesorios: 'diamond',
+      Calzado: 'steps'
+    };
+    return icons[category] || 'category';
+  }
+
+ 
 }
