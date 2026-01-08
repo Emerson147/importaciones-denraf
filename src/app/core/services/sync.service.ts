@@ -505,10 +505,25 @@ export class SyncService {
           }))
         : [];
 
+      // 🔧 FIX: Convertir fecha UTC de Supabase a Date correctamente
+      // Supabase devuelve timestamps sin 'Z', hay que asegurar que se interprete como UTC
+      let saleDate: Date;
+      if (data.created_at) {
+        const dateStr = data.created_at;
+        // Si no tiene indicador de timezone, añadir 'Z' para interpretarlo como UTC
+        if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
+          saleDate = new Date(dateStr + 'Z');
+        } else {
+          saleDate = new Date(dateStr);
+        }
+      } else {
+        saleDate = new Date();
+      }
+
       return {
         id: data.id,
         saleNumber: data.sale_number,
-        date: data.created_at ? new Date(data.created_at) : new Date(),
+        date: saleDate,
         items: items, // Items adaptados desde venta_items
         subtotal: Number(data.subtotal),
         discount: Number(data.discount || 0),

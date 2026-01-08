@@ -68,14 +68,30 @@ export class SalesService {
 
   /**
    * Cargar desde cache de IndexedDB (SIEMPRE primero)
+   * 🔧 FIX: También incluye ventas pendientes de localStorage
    */
   private async loadFromCache(): Promise<boolean> {
     try {
       const cachedSales = await this.localDb.getSales();
 
-      if (cachedSales && cachedSales.length > 0) {
-        console.log(`⚡ [Sales] Cache: ${cachedSales.length} ventas cargadas INSTANTÁNEAMENTE`);
-        this.salesSignal.set(cachedSales);
+      // 🔧 FIX: Cargar ventas pendientes de localStorage (respaldo síncrono)
+      const pendingSales = this.loadPendingSalesFromLocalStorage();
+
+      // Merge: cache + pendientes (sin duplicados)
+      const cachedIds = new Set(cachedSales?.map((s) => s.id) || []);
+      const uniquePendingSales = pendingSales.filter((ps) => !cachedIds.has(ps.id));
+
+      const allSales = [...uniquePendingSales, ...(cachedSales || [])].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      if (allSales.length > 0) {
+        console.log(
+          `⚡ [Sales] Cache: ${cachedSales?.length || 0} ventas + ${
+            uniquePendingSales.length
+          } pendientes de localStorage`
+        );
+        this.salesSignal.set(allSales);
         this.isLoading.set(false);
         return true;
       } else {
@@ -108,6 +124,7 @@ export class SalesService {
 
   /**
    * Sincronizar con Supabase (internal)
+   * 🔧 FIX: Fusiona datos locales con Supabase para no perder ventas no sincronizadas
    */
   private async syncFromSupabase(): Promise<void> {
     if (!navigator.onLine) {
@@ -120,13 +137,47 @@ export class SalesService {
       this.isSyncing.set(true);
       console.log('☁️ Cargando ventas desde Supabase...');
 
-      const { sales } = await this.syncService.pullFromCloud();
+      const { sales: supabaseSales } = await this.syncService.pullFromCloud();
 
-      if (sales && sales.length > 0) {
-        console.log(`✅ Supabase: ${sales.length} ventas cargadas`);
-        this.salesSignal.set(sales);
-        await this.localDb.saveSales(sales);
+      if (supabaseSales && supabaseSales.length > 0) {
+        console.log(`✅ Supabase: ${supabaseSales.length} ventas cargadas`);
+
+        // 🔧 FIX: Fusionar ventas locales con Supabase
+        // Conservar ventas locales que no están en Supabase (aún no sincronizadas)
+        const currentLocalSales = this.salesSignal();
+        const supabaseIds = new Set(supabaseSales.map((s: Sale) => s.id));
+
+        // Ventas locales que NO están en Supabase (pendientes de sync)
+        const localOnlySales = currentLocalSales.filter(
+          (localSale) => !supabaseIds.has(localSale.id)
+        );
+
+        if (localOnlySales.length > 0) {
+          console.log(
+            `🔄 Conservando ${localOnlySales.length} ventas locales pendientes de sincronización`
+          );
+        }
+
+        // Merge: Supabase + ventas locales no sincronizadas
+        const mergedSales = [...localOnlySales, ...supabaseSales].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+        this.salesSignal.set(mergedSales);
+        await this.localDb.saveSales(mergedSales);
         this.lastSyncTime.set(new Date());
+
+        // 🔧 FIX: Limpiar ventas de localStorage que ya están en Supabase
+        const pendingSales = this.getPendingSalesFromLocalStorage();
+        const confirmedIds = pendingSales.filter((ps) => supabaseIds.has(ps.id)).map((ps) => ps.id);
+        if (confirmedIds.length > 0) {
+          confirmedIds.forEach((id) => this.removePendingSaleFromLocalStorage(id));
+          console.log(
+            `🧹 Limpiadas ${confirmedIds.length} ventas de localStorage (ya en Supabase)`
+          );
+        }
+
+        console.log(`✅ Total ventas después de merge: ${mergedSales.length}`);
       }
     } catch (error) {
       console.error('❌ Error cargando ventas desde Supabase:', error);
@@ -262,6 +313,9 @@ export class SalesService {
         // Agregar venta al historial
         this.salesSignal.update((current) => [newSale, ...current]);
 
+        // 🔧 FIX: Respaldo SÍNCRONO en localStorage (no se pierde con F5)
+        this.savePendingSaleToLocalStorage(newSale);
+
         // 🔄 Sincronizar venta con Supabase en segundo plano
         this.syncService.queueForSync('sale', 'create', newSale);
         this.localDb.saveSale(newSale);
@@ -298,6 +352,44 @@ export class SalesService {
       'Registro de venta',
       'No se pudo completar la venta'
     );
+  }
+
+  // 🔧 Respaldo síncrono de ventas pendientes (localStorage)
+  private readonly PENDING_SALES_KEY = 'denraf_pending_sales';
+
+  private savePendingSaleToLocalStorage(sale: Sale): void {
+    try {
+      const pendingSales = this.getPendingSalesFromLocalStorage();
+      pendingSales.push(sale);
+      localStorage.setItem(this.PENDING_SALES_KEY, JSON.stringify(pendingSales));
+      console.log(`💾 Venta ${sale.saleNumber} guardada en localStorage como respaldo`);
+    } catch (error) {
+      console.warn('⚠️ Error guardando venta en localStorage:', error);
+    }
+  }
+
+  private getPendingSalesFromLocalStorage(): Sale[] {
+    try {
+      const data = localStorage.getItem(this.PENDING_SALES_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private removePendingSaleFromLocalStorage(saleId: string): void {
+    try {
+      const pendingSales = this.getPendingSalesFromLocalStorage();
+      const filtered = pendingSales.filter((s) => s.id !== saleId);
+      localStorage.setItem(this.PENDING_SALES_KEY, JSON.stringify(filtered));
+    } catch (error) {
+      console.warn('⚠️ Error removiendo venta de localStorage:', error);
+    }
+  }
+
+  // Cargar ventas pendientes de localStorage al iniciar
+  private loadPendingSalesFromLocalStorage(): Sale[] {
+    return this.getPendingSalesFromLocalStorage();
   }
 
   /**

@@ -2,16 +2,32 @@
   class="min-h-screen bg-stone-50 dark:bg-stone-950 p-4 sm:p-6 lg:p-8 transition-colors duration-150"
 >
   <div class="max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
-    <!-- Header Estandarizado con ui-page-header -->
-    <app-ui-page-header
-      title="Historial de Ventas"
-      subtitle="DenRaf · Registro completo de transacciones"
-      materialIcon="analytics"
-    >
-      <app-ui-export-menu [data]="exportData()" type="sales" (pdfExport)="exportToZenPDF()" />
-    </app-ui-page-header>
+    <!-- Header Zen Garden -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-stone-200/50 dark:bg-stone-700/50 flex items-center justify-center transition-colors duration-150"
+        >
+          <span
+            class="material-icons-outlined text-xl md:text-2xl text-stone-600 dark:text-stone-300"
+            >analytics</span
+          >
+        </div>
+        <div>
+          <h1 class="text-lg md:text-xl font-serif font-bold text-stone-800 dark:text-stone-100">
+            Historial de Ventas
+          </h1>
+          <p class="text-xs text-stone-500 dark:text-stone-400">
+            DenRaf • Registro completo de transacciones
+          </p>
+        </div>
+      </div>
 
-    <!-- Filtros + Resumen (compacto) -->
+      <!-- Botón Exportar -->
+      <app-ui-export-menu [data]="exportData()" type="sales" (pdfExport)="exportToZenPDF()" />
+    </div>
+
+    <!-- Filtros -->
     <div
       class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm p-4 sm:p-6 space-y-4 transition-colors duration-150"
     >
@@ -74,10 +90,10 @@
               class="pl-10 pr-4 py-2 rounded-xl text-sm font-medium bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 border-2 border-stone-200 dark:border-stone-700 focus:outline-none focus:border-stone-900 dark:focus:border-stone-100 transition-all appearance-none cursor-pointer hover:border-stone-400 dark:hover:border-stone-600"
               style="min-width: 180px"
             >
-              <option value="">Todos los vendedores</option>
-              <option *ngFor="let user of availableUsers()" [value]="user.id">
-                {{ user.name }}
-              </option>
+              <option value="">Todos</option>
+              <option value="user-1">Yo</option>
+              <option value="user-2">Mamá</option>
+              <option value="user-3">Hermano</option>
             </select>
             <span
               class="material-icons-outlined absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 text-lg pointer-events-none"
@@ -88,7 +104,7 @@
         </div>
       </div>
 
-      <!-- Resumen compacto (inline) -->
+      <!-- Resumen -->
       <div
         class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-stone-100 dark:border-stone-800"
       >
@@ -224,7 +240,7 @@
 
               <!-- Fecha -->
               <td class="px-4 sm:px-6 py-4 text-sm text-stone-600 dark:text-stone-400">
-                {{ sale.date | date : 'dd/MM/yy, h:mm a' }}
+                {{ sale.date | date : 'short' }}
               </td>
 
               <!-- Cliente -->
