@@ -7,14 +7,15 @@ import { AuthService } from '../../../core/auth/auth';
 import { ToastService } from '../../../core/services/toast.service';
 import { InventoryMovement, Product } from '../../../core/models';
 import { UiAnimatedDialogComponent } from '../../../shared/ui/ui-animated-dialog/ui-animated-dialog.component';
+import { UiPageHeaderComponent } from '../../../shared/ui/ui-page-header/ui-page-header.component';
 
 @Component({
   selector: 'app-inventory-movements',
   standalone: true,
-  imports: [CommonModule, FormsModule, UiAnimatedDialogComponent],
+  imports: [CommonModule, FormsModule, UiAnimatedDialogComponent, UiPageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './inventory-movements.component.html',
-  styleUrls: ['./inventory-movements.component.css']
+  styleUrls: ['./inventory-movements.component.css'],
 })
 export class InventoryMovementsComponent {
   private movementService = inject(InventoryMovementService);
@@ -26,7 +27,7 @@ export class InventoryMovementsComponent {
   selectedTab = signal<'all' | 'entradas' | 'ajustes'>('all');
   searchQuery = signal('');
   showNewMovementDialog = signal(false);
-  
+
   // Formulario de nuevo movimiento
   movementType = signal<'entrada' | 'ajuste'>('entrada');
   selectedProductId = signal<string>('');
@@ -58,10 +59,11 @@ export class InventoryMovementsComponent {
     // Filtrar por búsqueda
     const query = this.searchQuery().toLowerCase();
     if (query) {
-      movements = movements.filter(m =>
-        m.productName.toLowerCase().includes(query) ||
-        m.movementNumber.toLowerCase().includes(query) ||
-        m.reason.toLowerCase().includes(query)
+      movements = movements.filter(
+        (m) =>
+          m.productName.toLowerCase().includes(query) ||
+          m.movementNumber.toLowerCase().includes(query) ||
+          m.reason.toLowerCase().includes(query)
       );
     }
 
@@ -69,12 +71,12 @@ export class InventoryMovementsComponent {
   });
 
   // Stats
-  todayEntradas = computed(() => 
-    this.movementService.todayMovements().filter(m => m.type === 'entrada').length
+  todayEntradas = computed(
+    () => this.movementService.todayMovements().filter((m) => m.type === 'entrada').length
   );
 
-  todayAjustes = computed(() => 
-    this.movementService.todayMovements().filter(m => m.type === 'ajuste').length
+  todayAjustes = computed(
+    () => this.movementService.todayMovements().filter((m) => m.type === 'ajuste').length
   );
 
   /**
@@ -98,7 +100,7 @@ export class InventoryMovementsComponent {
    */
   submitMovement() {
     const productId = this.selectedProductId();
-    const product = this.products().find(p => p.id === productId);
+    const product = this.products().find((p) => p.id === productId);
 
     if (!product) {
       this.toastService.error('Selecciona un producto válido');
@@ -180,7 +182,7 @@ export class InventoryMovementsComponent {
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 
@@ -189,11 +191,16 @@ export class InventoryMovementsComponent {
    */
   getMovementIcon(type: string): string {
     switch (type) {
-      case 'entrada': return 'arrow_downward';
-      case 'salida': return 'arrow_upward';
-      case 'ajuste': return 'tune';
-      case 'devolucion': return 'undo';
-      default: return 'swap_horiz';
+      case 'entrada':
+        return 'arrow_downward';
+      case 'salida':
+        return 'arrow_upward';
+      case 'ajuste':
+        return 'tune';
+      case 'devolucion':
+        return 'undo';
+      default:
+        return 'swap_horiz';
     }
   }
 
@@ -202,10 +209,14 @@ export class InventoryMovementsComponent {
    */
   getMovementColor(type: string): string {
     switch (type) {
-      case 'entrada': return 'text-emerald-700 dark:text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30';
-      case 'salida': return 'text-rose-700 dark:text-rose-600 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30';
-      case 'ajuste': return 'text-sky-700 dark:text-sky-600 bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-900/30';
-      default: return 'text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-900/50 border border-stone-200 dark:border-stone-700';
+      case 'entrada':
+        return 'text-emerald-700 dark:text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30';
+      case 'salida':
+        return 'text-rose-700 dark:text-rose-600 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30';
+      case 'ajuste':
+        return 'text-sky-700 dark:text-sky-600 bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-900/30';
+      default:
+        return 'text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-900/50 border border-stone-200 dark:border-stone-700';
     }
   }
 }

@@ -223,7 +223,7 @@
         routerLinkActive="bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-md"
         #rlaPurchases="routerLinkActive"
         class="group relative flex items-center gap-3 rounded-xl border border-transparent px-3 py-3 text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-all"
-        [title]="sidebarCollapsed() ? 'Compras de Inventario' : ''"
+        [title]="sidebarCollapsed() ? 'Entradas de Stock' : ''"
       >
         <span
           class="material-icons-outlined text-[22px] shrink-0"
@@ -236,12 +236,12 @@
           class="whitespace-nowrap transition-all duration-100"
           [ngClass]="sidebarCollapsed() ? 'opacity-0 w-0 hidden' : 'opacity-100'"
         >
-          Compras
+          Entradas
         </span>
         
         @if (sidebarCollapsed()) {
           <div class="absolute left-full ml-2 px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-xs font-medium rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-            Compras de Inventario
+            Entradas de Stock
           </div>
         }
       </a>
@@ -525,7 +525,7 @@
         >
           shopping_cart
         </span>
-        <span>Compras</span>
+        <span>Entradas</span>
       </a>
 
       <a

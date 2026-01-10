@@ -6,7 +6,7 @@
  */
 import { Injectable, signal } from '@angular/core';
 import { openDB, IDBPDatabase, DBSchema } from 'idb';
-import type { Product, Sale, User } from '../models';
+import type { Product, Sale, User, InventoryMovement } from '../models';
 
 // Esquema de la base de datos local
 interface DenrafDB extends DBSchema {
@@ -23,6 +23,11 @@ interface DenrafDB extends DBSchema {
   usuarios: {
     key: string;
     value: User;
+  };
+  movimientos: {
+    key: string;
+    value: InventoryMovement;
+    indexes: { 'por-tipo': string; 'por-fecha': string };
   };
   sync_queue: {
     key: string;
@@ -43,7 +48,7 @@ export interface SyncQueueItem {
 export class LocalDbService {
   private db = signal<IDBPDatabase<DenrafDB> | null>(null);
   private dbName = 'denraf-offline-db';
-  private dbVersion = 2; // Incrementado para agregar usuarios
+  private dbVersion = 3; // Incrementado para agregar movimientos
 
   isReady = signal(false);
 
@@ -78,6 +83,13 @@ export class LocalDbService {
           // Store de cola de sincronización
           if (!db.objectStoreNames.contains('sync_queue')) {
             db.createObjectStore('sync_queue', { keyPath: 'id' });
+          }
+
+          // Store de movimientos de inventario (nuevo en v3)
+          if (!db.objectStoreNames.contains('movimientos')) {
+            const movStore = db.createObjectStore('movimientos', { keyPath: 'id' });
+            movStore.createIndex('por-tipo', 'type');
+            movStore.createIndex('por-fecha', 'date');
           }
         },
       });
@@ -134,7 +146,13 @@ export class LocalDbService {
   async getSales(): Promise<Sale[]> {
     const db = this.db();
     if (!db) return [];
-    return db.getAll('ventas');
+    const sales = await db.getAll('ventas');
+
+    // 🔧 FIX: Asegurar que las fechas sean Date objects, no strings
+    return sales.map((sale) => ({
+      ...sale,
+      date: sale.date instanceof Date ? sale.date : new Date(sale.date),
+    }));
   }
 
   async getSale(id: string): Promise<Sale | undefined> {
@@ -236,6 +254,45 @@ export class LocalDbService {
     await db.delete('usuarios', id);
   }
 
+  // ========== MOVIMIENTOS DE INVENTARIO ==========
+
+  async getMovements(): Promise<InventoryMovement[]> {
+    const db = this.db();
+    if (!db) return [];
+    const movements = await db.getAll('movimientos');
+
+    // Asegurar que las fechas sean Date objects
+    return movements.map((mov) => ({
+      ...mov,
+      date: mov.date instanceof Date ? mov.date : new Date(mov.date),
+    }));
+  }
+
+  async getMovement(id: string): Promise<InventoryMovement | undefined> {
+    const db = this.db();
+    if (!db) return undefined;
+    return db.get('movimientos', id);
+  }
+
+  async saveMovement(movement: InventoryMovement): Promise<void> {
+    const db = this.db();
+    if (!db) return;
+    await db.put('movimientos', movement);
+  }
+
+  async saveMovements(movements: InventoryMovement[]): Promise<void> {
+    const db = this.db();
+    if (!db) return;
+    const tx = db.transaction('movimientos', 'readwrite');
+    await Promise.all([...movements.map((m) => tx.store.put(m)), tx.done]);
+  }
+
+  async getMovementsByType(type: string): Promise<InventoryMovement[]> {
+    const db = this.db();
+    if (!db) return [];
+    return db.getAllFromIndex('movimientos', 'por-tipo', type);
+  }
+
   // ========== UTILIDADES ==========
 
   async clearAll(): Promise<void> {
@@ -244,6 +301,7 @@ export class LocalDbService {
     await db.clear('productos');
     await db.clear('ventas');
     await db.clear('usuarios');
+    await db.clear('movimientos');
     await db.clear('sync_queue');
   }
 }

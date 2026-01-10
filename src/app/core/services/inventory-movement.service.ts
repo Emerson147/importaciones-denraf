@@ -8,7 +8,7 @@ import { ErrorHandlerService } from './error-handler.service';
 
 /**
  * 🚀 InventoryMovementService - Gestión de movimientos de inventario
- * 
+ *
  * Estrategia:
  * 1. Registra entradas, salidas, ajustes y devoluciones
  * 2. Actualiza stock automáticamente
@@ -27,7 +27,7 @@ export class InventoryMovementService {
 
   // State
   private movementsSignal = signal<InventoryMovement[]>([]);
-  
+
   // 🔄 Estado de carga
   isLoading = signal(true);
   private initialized = false;
@@ -38,21 +38,13 @@ export class InventoryMovementService {
   readonly movements = this.movementsSignal.asReadonly();
 
   // Computed
-  entradas = computed(() => 
-    this.movementsSignal().filter(m => m.type === 'entrada')
-  );
+  entradas = computed(() => this.movementsSignal().filter((m) => m.type === 'entrada'));
 
-  salidas = computed(() => 
-    this.movementsSignal().filter(m => m.type === 'salida')
-  );
+  salidas = computed(() => this.movementsSignal().filter((m) => m.type === 'salida'));
 
-  ajustes = computed(() => 
-    this.movementsSignal().filter(m => m.type === 'ajuste')
-  );
+  ajustes = computed(() => this.movementsSignal().filter((m) => m.type === 'ajuste'));
 
-  devoluciones = computed(() => 
-    this.movementsSignal().filter(m => m.type === 'devolucion')
-  );
+  devoluciones = computed(() => this.movementsSignal().filter((m) => m.type === 'devolucion'));
 
   // 📏 Cache de fecha actual para evitar recalcular new Date() en cada computed
   private currentDateCache = computed(() => {
@@ -64,9 +56,7 @@ export class InventoryMovementService {
   // Movimientos de hoy (optimizado con cache)
   todayMovements = computed(() => {
     const today = this.currentDateCache();
-    return this.movementsSignal().filter(m => 
-      new Date(m.date).toDateString() === today
-    );
+    return this.movementsSignal().filter((m) => new Date(m.date).toDateString() === today);
   });
 
   // 💰 Inversión total en compras (entradas)
@@ -79,25 +69,25 @@ export class InventoryMovementService {
   // 💸 Inversión del día
   todayInvestment = computed(() => {
     return this.todayMovements()
-      .filter(m => m.type === 'entrada')
+      .filter((m) => m.type === 'entrada')
       .reduce((sum, entrada) => sum + (entrada.totalCost || 0), 0);
   });
 
   // 💸 Inversión de la semana (optimizado con timestamps)
   weeklyInvestment = computed(() => {
-    const weekAgoTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    
+    const weekAgoTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
     return this.entradas()
-      .filter(m => new Date(m.date).getTime() >= weekAgoTime)
+      .filter((m) => new Date(m.date).getTime() >= weekAgoTime)
       .reduce((sum, entrada) => sum + (entrada.totalCost || 0), 0);
   });
 
   // 💸 Inversión del mes (optimizado con timestamps)
   monthlyInvestment = computed(() => {
-    const monthAgoTime = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    
+    const monthAgoTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
     return this.entradas()
-      .filter(m => new Date(m.date).getTime() >= monthAgoTime)
+      .filter((m) => new Date(m.date).getTime() >= monthAgoTime)
       .reduce((sum, entrada) => sum + (entrada.totalCost || 0), 0);
   });
 
@@ -130,10 +120,8 @@ export class InventoryMovementService {
 
   private async loadFromCache(): Promise<boolean> {
     try {
-      // TODO: Implementar en LocalDbService
-      // const cached = await this.localDb.getMovements();
-      const cached: InventoryMovement[] = [];
-      
+      const cached = await this.localDb.getMovements();
+
       if (cached && cached.length > 0) {
         console.log(`⚡ [Movements] Cache: ${cached.length} movimientos`);
         this.movementsSignal.set(cached);
@@ -150,7 +138,7 @@ export class InventoryMovementService {
   private shouldSyncWithSupabase(): boolean {
     const lastSync = this.lastSyncTime();
     if (!lastSync) return true;
-    
+
     const timeSinceLastSync = Date.now() - lastSync.getTime();
     return timeSinceLastSync > this.SYNC_INTERVAL_MS;
   }
@@ -180,7 +168,9 @@ export class InventoryMovementService {
   /**
    * 📥 Registrar entrada de inventario
    */
-  registerEntrada(entrada: Omit<InventoryMovement, 'id' | 'movementNumber' | 'date' | 'type'>): InventoryMovement | null {
+  registerEntrada(
+    entrada: Omit<InventoryMovement, 'id' | 'movementNumber' | 'date' | 'type'>
+  ): InventoryMovement | null {
     return this.errorHandler.handleSyncOperation(
       () => {
         const newMovement: InventoryMovement = {
@@ -203,11 +193,13 @@ export class InventoryMovementService {
         }
 
         // Agregar movimiento
-        this.movementsSignal.update(current => [newMovement, ...current]);
+        this.movementsSignal.update((current) => [newMovement, ...current]);
 
         // Sincronizar con Supabase
         this.syncService.queueForSync('inventory_movement', 'create', newMovement);
-        // TODO: this.localDb.saveMovement(newMovement);
+
+        // Guardar en IndexedDB
+        this.localDb.saveMovement(newMovement);
 
         console.log('✅ Entrada registrada:', newMovement);
         return newMovement;
@@ -220,7 +212,9 @@ export class InventoryMovementService {
   /**
    * 📤 Registrar salida de inventario (manual)
    */
-  registerSalida(salida: Omit<InventoryMovement, 'id' | 'movementNumber' | 'date' | 'type'>): InventoryMovement | null {
+  registerSalida(
+    salida: Omit<InventoryMovement, 'id' | 'movementNumber' | 'date' | 'type'>
+  ): InventoryMovement | null {
     return this.errorHandler.handleSyncOperation(
       () => {
         const newMovement: InventoryMovement = {
@@ -243,10 +237,13 @@ export class InventoryMovementService {
         }
 
         // Agregar movimiento
-        this.movementsSignal.update(current => [newMovement, ...current]);
+        this.movementsSignal.update((current) => [newMovement, ...current]);
 
         // Sincronizar
         this.syncService.queueForSync('inventory_movement', 'create', newMovement);
+
+        // Guardar en IndexedDB
+        this.localDb.saveMovement(newMovement);
 
         console.log('✅ Salida registrada:', newMovement);
         return newMovement;
@@ -259,7 +256,9 @@ export class InventoryMovementService {
   /**
    * 🔧 Registrar ajuste de inventario
    */
-  registerAjuste(ajuste: Omit<InventoryMovement, 'id' | 'movementNumber' | 'date' | 'type'>): InventoryMovement | null {
+  registerAjuste(
+    ajuste: Omit<InventoryMovement, 'id' | 'movementNumber' | 'date' | 'type'>
+  ): InventoryMovement | null {
     return this.errorHandler.handleSyncOperation(
       () => {
         const newMovement: InventoryMovement = {
@@ -271,16 +270,24 @@ export class InventoryMovementService {
         };
 
         // Actualizar stock (positivo o negativo)
-        const success = ajuste.quantity > 0
-          ? this.productService.addStock(ajuste.productId, ajuste.quantity, ajuste.variantId)
-          : this.productService.reduceStock(ajuste.productId, Math.abs(ajuste.quantity), ajuste.variantId);
+        const success =
+          ajuste.quantity > 0
+            ? this.productService.addStock(ajuste.productId, ajuste.quantity, ajuste.variantId)
+            : this.productService.reduceStock(
+                ajuste.productId,
+                Math.abs(ajuste.quantity),
+                ajuste.variantId
+              );
 
         if (!success) {
           throw new Error('No se pudo ajustar el stock');
         }
 
-        this.movementsSignal.update(current => [newMovement, ...current]);
+        this.movementsSignal.update((current) => [newMovement, ...current]);
         this.syncService.queueForSync('inventory_movement', 'create', newMovement);
+
+        // Guardar en IndexedDB
+        this.localDb.saveMovement(newMovement);
 
         console.log('✅ Ajuste registrado:', newMovement);
         return newMovement;
@@ -294,10 +301,9 @@ export class InventoryMovementService {
    * Generar número de movimiento único
    */
   private generateMovementNumber(prefix: string): string {
-    const count = this.movementsSignal().filter(m => 
-      m.movementNumber.startsWith(prefix)
-    ).length + 1;
-    
+    const count =
+      this.movementsSignal().filter((m) => m.movementNumber.startsWith(prefix)).length + 1;
+
     return `${prefix}-${String(count).padStart(4, '0')}`;
   }
 
@@ -305,14 +311,14 @@ export class InventoryMovementService {
    * Obtener movimientos por producto
    */
   getMovementsByProduct(productId: string): InventoryMovement[] {
-    return this.movementsSignal().filter(m => m.productId === productId);
+    return this.movementsSignal().filter((m) => m.productId === productId);
   }
 
   /**
    * Obtener movimientos por rango de fechas
    */
   getMovementsByDateRange(startDate: Date, endDate: Date): InventoryMovement[] {
-    return this.movementsSignal().filter(m => {
+    return this.movementsSignal().filter((m) => {
       const moveDate = new Date(m.date);
       return moveDate >= startDate && moveDate <= endDate;
     });

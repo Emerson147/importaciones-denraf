@@ -371,7 +371,14 @@ export class SalesService {
   private getPendingSalesFromLocalStorage(): Sale[] {
     try {
       const data = localStorage.getItem(this.PENDING_SALES_KEY);
-      return data ? JSON.parse(data) : [];
+      if (!data) return [];
+
+      // 🔧 FIX: Reconvertir strings de fecha a Date objects
+      const sales = JSON.parse(data) as Sale[];
+      return sales.map((sale) => ({
+        ...sale,
+        date: new Date(sale.date), // Convertir string ISO a Date
+      }));
     } catch {
       return [];
     }
